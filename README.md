@@ -1,9 +1,9 @@
 INTELLIGENT SUPPLY CHAIN MANAGEMENT PLATFORM FOR ELECTRIC VEHICLE MANUFACTURING
 
-Problem Statement
+Problem Statement:= 
 EV manufacturers face challenges such as demand fluctuations, inventory shortages, supplier delays, and procurement inefficiencies. Existing systems are reactive and require manual analysis, leading to production disruptions and increased operational costs.
 
-Objectives
+Objectives:= 
 Forecast EV demand and battery requirements using AI.
 Optimize inventory levels to avoid shortages and overstocking.
 Analyze supplier performance and predict risks.
@@ -12,7 +12,7 @@ Develop a Graph-RAG assistant for document-based query answering.
 Implement AI agents for intelligent decision support.
 Generate procurement and supply chain recommendations.
 
-Technical Stack
+Technical Stack:= 
 Frontend: React.js, Material UI
 Backend: FastAPI
 Database: PostgreSQL
@@ -24,7 +24,7 @@ Graph-RAG: LangChain, Neo4j GraphRAG, ChromaDB
 Visualization: Power BI
 Cloud: Microsoft Azure
 
-Expected Outcomes
+Expected Outcomes:= 
 Accurate EV demand forecasting
 Optimized inventory management
 Early detection of supplier risks
