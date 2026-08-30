@@ -1,2 +1,2 @@
-# Copilot-said-INTELLIGENT-SUPPLY-CHAIN-MANAGEMENT-PLATFORM-FOR-ELECTRIC-VEHICLE-MANUFACTURING
+# INTELLIGENT-SUPPLY-CHAIN-MANAGEMENT-PLATFORM-FOR-ELECTRIC-VEHICLE-MANUFACTURING
 The Intelligent Supply Chain Management Platform for Electric Vehicle Manufacturing is an AI-powered decision intelligence system that combines predictive analytics, Agentic AI, Knowledge Graphs, and Graph-RAG to help EV manufacturers optimize inventory, manage supplier risks, forecast demand, and make proactive procurement decisions.
