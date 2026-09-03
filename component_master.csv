@@ -1,0 +1,46 @@
+part_id,part_name,category,sub_category,unit,criticality
+P001,Battery Pack,Battery,Energy Storage,Unit,Critical
+P002,Battery Cells,Battery,Energy Storage,Unit,Critical
+P003,Battery Management System,Battery,Battery Control,Unit,Critical
+P004,Battery Module,Battery,Energy Storage,Unit,Critical
+P005,Battery Enclosure,Battery,Mechanical,Unit,High
+P006,Busbar,Battery,Electrical Connection,Unit,High
+P007,Cell Connector,Battery,Electrical Connection,Unit,High
+P008,Battery Sensor,Battery,Monitoring,Unit,High
+P009,Battery Cooling Plate,Battery,Thermal,Unit,High
+P010,Battery Safety Disconnect,Battery,Safety,Unit,Critical
+P011,Electric Motor,Powertrain,Traction Motor,Unit,Critical
+P012,Motor Controller,Powertrain,Motor Control,Unit,Critical
+P013,Reduction Gearbox,Powertrain,Transmission,Unit,High
+P014,Differential,Powertrain,Transmission,Unit,High
+P015,Drive Shaft,Powertrain,Transmission,Unit,Medium
+P016,Inverter,Power Electronics,Power Conversion,Unit,Critical
+P017,DC-DC Converter,Power Electronics,Power Conversion,Unit,High
+P018,Power Distribution Unit,Power Electronics,Power Distribution,Unit,High
+P019,High Voltage Contactor,Power Electronics,Switching,Unit,Critical
+P020,High Voltage Fuse,Power Electronics,Protection,Unit,High
+P021,On-board Charger,Charging,Charging System,Unit,High
+P022,Charging Port,Charging,Charging Interface,Unit,Medium
+P023,Charging Cable,Charging,Charging Interface,Unit,Medium
+P024,High Voltage Connector,Charging,Electrical Connection,Unit,High
+P025,Thermal Management System,Thermal,Thermal Control,Unit,High
+P026,Cooling Pump,Thermal,Cooling,Unit,Medium
+P027,Cooling Fan,Thermal,Cooling,Unit,Medium
+P028,Radiator,Thermal,Cooling,Unit,Medium
+P029,Coolant,Thermal,Fluid,Liter,Medium
+P030,High Voltage Cable,Electrical,High Voltage,Meter,High
+P031,Wiring Harness,Electrical,Wiring,Unit,High
+P032,12V Auxiliary Battery,Electrical,Auxiliary Power,Unit,Medium
+P033,Low Voltage Connector,Electrical,Connection,Unit,Medium
+P034,Vehicle Control Unit,Electronics,Vehicle Control,Unit,Critical
+P035,Electronic Control Module,Electronics,Control,Unit,High
+P036,CAN Communication Module,Electronics,Communication,Unit,High
+P037,Vehicle Display Unit,Electronics,HMI,Unit,Medium
+P038,Insulation Monitoring Device,Safety,Electrical Safety,Unit,Critical
+P039,Crash Sensor,Safety,Vehicle Safety,Unit,High
+P040,Emergency Disconnect,Safety,Battery Safety,Unit,Critical
+P041,Vehicle Chassis,Mechanical,Structure,Unit,High
+P042,Suspension Assembly,Mechanical,Suspension,Unit,Medium
+P043,Brake Assembly,Mechanical,Braking,Unit,High
+P044,Steering Assembly,Mechanical,Steering,Unit,High
+P045,Wheel Assembly,Mechanical,Wheel,Unit,Medium

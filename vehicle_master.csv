@@ -1,0 +1,8 @@
+vehicle_id,vehicle_type,vehicle_category,use_case
+EV001,Electric 2W,Two Wheeler,Personal Mobility
+EV002,Electric 3W Passenger,Three Wheeler,Passenger Transport
+EV003,Electric 3W Goods,Three Wheeler,Goods Transport
+EV004,Electric Car,Passenger Vehicle,Passenger Transport
+EV005,Electric LGV,Commercial Vehicle,Goods Transport
+EV006,Electric Bus,Commercial Vehicle,Public Transport
+EV007,Electric HGV/Truck,Commercial Vehicle,Heavy Goods Transport

@@ -1,0 +1,168 @@
+vehicle_id,vehicle_type,part_id,part_name,quantity_per_vehicle,unit
+EV001,Electric 2W,P001,Battery Pack,1,Unit
+EV001,Electric 2W,P002,Battery Cells,1,Set
+EV001,Electric 2W,P003,Battery Management System,1,Unit
+EV001,Electric 2W,P011,Electric Motor,1,Unit
+EV001,Electric 2W,P012,Motor Controller,1,Unit
+EV001,Electric 2W,P017,DC-DC Converter,1,Unit
+EV001,Electric 2W,P022,Charging Port,1,Unit
+EV001,Electric 2W,P023,Charging Cable,1,Unit
+EV001,Electric 2W,P030,High Voltage Cable,1,Meter
+EV001,Electric 2W,P031,Wiring Harness,1,Unit
+EV001,Electric 2W,P032,12V Auxiliary Battery,1,Unit
+EV002,Electric 3W Passenger,P001,Battery Pack,1,Unit
+EV002,Electric 3W Passenger,P002,Battery Cells,1,Set
+EV002,Electric 3W Passenger,P003,Battery Management System,1,Unit
+EV002,Electric 3W Passenger,P011,Electric Motor,1,Unit
+EV002,Electric 3W Passenger,P012,Motor Controller,1,Unit
+EV002,Electric 3W Passenger,P016,Inverter,1,Unit
+EV002,Electric 3W Passenger,P017,DC-DC Converter,1,Unit
+EV002,Electric 3W Passenger,P022,Charging Port,1,Unit
+EV002,Electric 3W Passenger,P023,Charging Cable,1,Unit
+EV002,Electric 3W Passenger,P030,High Voltage Cable,2,Meter
+EV002,Electric 3W Passenger,P031,Wiring Harness,1,Unit
+EV002,Electric 3W Passenger,P032,12V Auxiliary Battery,1,Unit
+EV003,Electric 3W Goods,P001,Battery Pack,1,Unit
+EV003,Electric 3W Goods,P002,Battery Cells,1,Set
+EV003,Electric 3W Goods,P003,Battery Management System,1,Unit
+EV003,Electric 3W Goods,P011,Electric Motor,1,Unit
+EV003,Electric 3W Goods,P012,Motor Controller,1,Unit
+EV003,Electric 3W Goods,P016,Inverter,1,Unit
+EV003,Electric 3W Goods,P017,DC-DC Converter,1,Unit
+EV003,Electric 3W Goods,P022,Charging Port,1,Unit
+EV003,Electric 3W Goods,P023,Charging Cable,1,Unit
+EV003,Electric 3W Goods,P030,High Voltage Cable,2,Meter
+EV003,Electric 3W Goods,P031,Wiring Harness,1,Unit
+EV003,Electric 3W Goods,P032,12V Auxiliary Battery,1,Unit
+EV004,Electric Car,P001,Battery Pack,1,Unit
+EV004,Electric Car,P002,Battery Cells,1,Set
+EV004,Electric Car,P003,Battery Management System,1,Unit
+EV004,Electric Car,P004,Battery Module,1,Unit
+EV004,Electric Car,P005,Battery Enclosure,1,Unit
+EV004,Electric Car,P006,Busbar,1,Set
+EV004,Electric Car,P007,Cell Connector,1,Set
+EV004,Electric Car,P008,Battery Sensor,4,Unit
+EV004,Electric Car,P009,Battery Cooling Plate,1,Unit
+EV004,Electric Car,P010,Battery Safety Disconnect,1,Unit
+EV004,Electric Car,P011,Electric Motor,1,Unit
+EV004,Electric Car,P012,Motor Controller,1,Unit
+EV004,Electric Car,P013,Reduction Gearbox,1,Unit
+EV004,Electric Car,P014,Differential,1,Unit
+EV004,Electric Car,P016,Inverter,1,Unit
+EV004,Electric Car,P017,DC-DC Converter,1,Unit
+EV004,Electric Car,P018,Power Distribution Unit,1,Unit
+EV004,Electric Car,P019,High Voltage Contactor,4,Unit
+EV004,Electric Car,P020,High Voltage Fuse,2,Unit
+EV004,Electric Car,P021,On-board Charger,1,Unit
+EV004,Electric Car,P022,Charging Port,1,Unit
+EV004,Electric Car,P023,Charging Cable,1,Unit
+EV004,Electric Car,P024,High Voltage Connector,6,Unit
+EV004,Electric Car,P025,Thermal Management System,1,Unit
+EV004,Electric Car,P026,Cooling Pump,2,Unit
+EV004,Electric Car,P027,Cooling Fan,2,Unit
+EV004,Electric Car,P028,Radiator,1,Unit
+EV004,Electric Car,P029,Coolant,8,Liter
+EV004,Electric Car,P030,High Voltage Cable,8,Meter
+EV004,Electric Car,P031,Wiring Harness,1,Unit
+EV004,Electric Car,P032,12V Auxiliary Battery,1,Unit
+EV004,Electric Car,P034,Vehicle Control Unit,1,Unit
+EV004,Electric Car,P035,Electronic Control Module,3,Unit
+EV004,Electric Car,P036,CAN Communication Module,1,Unit
+EV004,Electric Car,P037,Vehicle Display Unit,1,Unit
+EV004,Electric Car,P038,Insulation Monitoring Device,1,Unit
+EV004,Electric Car,P039,Crash Sensor,4,Unit
+EV004,Electric Car,P040,Emergency Disconnect,1,Unit
+EV004,Electric Car,P041,Vehicle Chassis,1,Unit
+EV004,Electric Car,P042,Suspension Assembly,4,Unit
+EV004,Electric Car,P043,Brake Assembly,4,Unit
+EV004,Electric Car,P044,Steering Assembly,1,Unit
+EV004,Electric Car,P045,Wheel Assembly,4,Unit
+EV005,Electric LGV,P001,Battery Pack,1,Unit
+EV005,Electric LGV,P003,Battery Management System,1,Unit
+EV005,Electric LGV,P004,Battery Module,2,Unit
+EV005,Electric LGV,P011,Electric Motor,1,Unit
+EV005,Electric LGV,P012,Motor Controller,1,Unit
+EV005,Electric LGV,P013,Reduction Gearbox,1,Unit
+EV005,Electric LGV,P016,Inverter,1,Unit
+EV005,Electric LGV,P017,DC-DC Converter,1,Unit
+EV005,Electric LGV,P018,Power Distribution Unit,1,Unit
+EV005,Electric LGV,P021,On-board Charger,1,Unit
+EV005,Electric LGV,P022,Charging Port,1,Unit
+EV005,Electric LGV,P024,High Voltage Connector,6,Unit
+EV005,Electric LGV,P025,Thermal Management System,1,Unit
+EV005,Electric LGV,P026,Cooling Pump,2,Unit
+EV005,Electric LGV,P030,High Voltage Cable,10,Meter
+EV005,Electric LGV,P031,Wiring Harness,1,Unit
+EV005,Electric LGV,P032,12V Auxiliary Battery,1,Unit
+EV005,Electric LGV,P034,Vehicle Control Unit,1,Unit
+EV005,Electric LGV,P038,Insulation Monitoring Device,1,Unit
+EV006,Electric Bus,P001,Battery Pack,1,Unit
+EV006,Electric Bus,P002,Battery Cells,1,Set
+EV006,Electric Bus,P003,Battery Management System,1,Unit
+EV006,Electric Bus,P004,Battery Module,8,Unit
+EV006,Electric Bus,P005,Battery Enclosure,2,Unit
+EV006,Electric Bus,P009,Battery Cooling Plate,8,Unit
+EV006,Electric Bus,P010,Battery Safety Disconnect,2,Unit
+EV006,Electric Bus,P011,Electric Motor,2,Unit
+EV006,Electric Bus,P012,Motor Controller,2,Unit
+EV006,Electric Bus,P013,Reduction Gearbox,2,Unit
+EV006,Electric Bus,P014,Differential,2,Unit
+EV006,Electric Bus,P016,Inverter,2,Unit
+EV006,Electric Bus,P017,DC-DC Converter,2,Unit
+EV006,Electric Bus,P018,Power Distribution Unit,2,Unit
+EV006,Electric Bus,P019,High Voltage Contactor,8,Unit
+EV006,Electric Bus,P020,High Voltage Fuse,4,Unit
+EV006,Electric Bus,P021,On-board Charger,2,Unit
+EV006,Electric Bus,P022,Charging Port,2,Unit
+EV006,Electric Bus,P024,High Voltage Connector,12,Unit
+EV006,Electric Bus,P025,Thermal Management System,2,Unit
+EV006,Electric Bus,P026,Cooling Pump,4,Unit
+EV006,Electric Bus,P027,Cooling Fan,4,Unit
+EV006,Electric Bus,P028,Radiator,2,Unit
+EV006,Electric Bus,P030,High Voltage Cable,30,Meter
+EV006,Electric Bus,P031,Wiring Harness,2,Unit
+EV006,Electric Bus,P032,12V Auxiliary Battery,2,Unit
+EV006,Electric Bus,P034,Vehicle Control Unit,1,Unit
+EV006,Electric Bus,P035,Electronic Control Module,5,Unit
+EV006,Electric Bus,P036,CAN Communication Module,2,Unit
+EV006,Electric Bus,P038,Insulation Monitoring Device,2,Unit
+EV006,Electric Bus,P040,Emergency Disconnect,2,Unit
+EV006,Electric Bus,P041,Vehicle Chassis,1,Unit
+EV006,Electric Bus,P042,Suspension Assembly,6,Unit
+EV006,Electric Bus,P043,Brake Assembly,6,Unit
+EV006,Electric Bus,P044,Steering Assembly,1,Unit
+EV006,Electric Bus,P045,Wheel Assembly,6,Unit
+EV007,Electric HGV/Truck,P001,Battery Pack,1,Unit
+EV007,Electric HGV/Truck,P003,Battery Management System,1,Unit
+EV007,Electric HGV/Truck,P004,Battery Module,12,Unit
+EV007,Electric HGV/Truck,P005,Battery Enclosure,2,Unit
+EV007,Electric HGV/Truck,P009,Battery Cooling Plate,12,Unit
+EV007,Electric HGV/Truck,P011,Electric Motor,2,Unit
+EV007,Electric HGV/Truck,P012,Motor Controller,2,Unit
+EV007,Electric HGV/Truck,P013,Reduction Gearbox,2,Unit
+EV007,Electric HGV/Truck,P014,Differential,2,Unit
+EV007,Electric HGV/Truck,P016,Inverter,2,Unit
+EV007,Electric HGV/Truck,P017,DC-DC Converter,2,Unit
+EV007,Electric HGV/Truck,P018,Power Distribution Unit,2,Unit
+EV007,Electric HGV/Truck,P019,High Voltage Contactor,8,Unit
+EV007,Electric HGV/Truck,P020,High Voltage Fuse,6,Unit
+EV007,Electric HGV/Truck,P021,On-board Charger,2,Unit
+EV007,Electric HGV/Truck,P022,Charging Port,2,Unit
+EV007,Electric HGV/Truck,P024,High Voltage Connector,12,Unit
+EV007,Electric HGV/Truck,P025,Thermal Management System,2,Unit
+EV007,Electric HGV/Truck,P026,Cooling Pump,4,Unit
+EV007,Electric HGV/Truck,P027,Cooling Fan,4,Unit
+EV007,Electric HGV/Truck,P028,Radiator,2,Unit
+EV007,Electric HGV/Truck,P030,High Voltage Cable,40,Meter
+EV007,Electric HGV/Truck,P031,Wiring Harness,2,Unit
+EV007,Electric HGV/Truck,P032,12V Auxiliary Battery,2,Unit
+EV007,Electric HGV/Truck,P034,Vehicle Control Unit,1,Unit
+EV007,Electric HGV/Truck,P035,Electronic Control Module,5,Unit
+EV007,Electric HGV/Truck,P036,CAN Communication Module,2,Unit
+EV007,Electric HGV/Truck,P038,Insulation Monitoring Device,2,Unit
+EV007,Electric HGV/Truck,P040,Emergency Disconnect,2,Unit
+EV007,Electric HGV/Truck,P041,Vehicle Chassis,1,Unit
+EV007,Electric HGV/Truck,P042,Suspension Assembly,6,Unit
+EV007,Electric HGV/Truck,P043,Brake Assembly,6,Unit
+EV007,Electric HGV/Truck,P044,Steering Assembly,1,Unit
+EV007,Electric HGV/Truck,P045,Wheel Assembly,6,Unit

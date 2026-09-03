@@ -1,0 +1,28 @@
+supplier_id,supplier_name,location,component_category,lead_time_days,unit_cost,monthly_capacity,quality_rating,reliability_score,status
+S001,Battery Systems India,Tamil Nadu,Battery,15,85000,12000,4.5,92,Active
+S002,Advanced Energy Systems,Karnataka,Battery,18,88000,10000,4.3,89,Active
+S003,EV Cell Technologies,Gujarat,Battery,25,4200,500000,4.2,87,Active
+S004,PowerCell Manufacturing,Maharashtra,Battery,22,4500,450000,4.4,91,Active
+S005,Electric Drive Systems,Tamil Nadu,Powertrain,20,42000,8000,4.4,94,Active
+S006,EV Motor Technologies,Karnataka,Powertrain,24,45000,7000,90.0,88,Active
+S007,Advanced Drivetrain India,Maharashtra,Powertrain,28,48000,6000,4.1,86,Active
+S008,Power Electronics India,Tamil Nadu,Power Electronics,18,28000,9000,4.5,93,Active
+S009,Smart Power Systems,Karnataka,Power Electronics,21,30000,7500,4.2,89,Active
+S010,EV Inverter Technologies,Gujarat,Power Electronics,25,32000,6000,4.0,84,Active
+S011,ChargeTech India,Tamil Nadu,Charging,12,18000,10000,4.4,95,Active
+S012,EV Charging Systems,Maharashtra,Charging,16,20000,8000,4.1,88,Active
+S013,Smart Charging Solutions,Karnataka,Charging,20,22000,6000,4.0,85,Active
+S014,Thermal Systems India,Tamil Nadu,Thermal,14,12000,9000,4.3,92,Active
+S015,EV Cooling Technologies,Karnataka,Thermal,18,13500,7000,4.2,89,Active
+S016,Advanced Thermal Solutions,Maharashtra,Thermal,22,14500,6000,4.0,85,Active
+S017,Automotive Wiring India,Tamil Nadu,Electrical,10,7500,15000,4.5,95,Active
+S018,High Voltage Systems India,Gujarat,Electrical,17,9000,10000,4.3,91,Active
+S019,Auto Electrical Technologies,Maharashtra,Electrical,15,8000,12000,4.2,89,Active
+S020,Vehicle Electronics India,Tamil Nadu,Electronics,20,16000,7000,4.4,93,Active
+S021,Automotive Control Systems,Karnataka,Electronics,24,18000,6000,4.2,88,Active
+S022,EV Control Technologies,Maharashtra,Electronics,27,19000,5000,4.0,84,Active
+S023,Automotive Safety Systems,Tamil Nadu,Safety,18,9500,8000,4.4,92,Active
+S024,EV Safety Technologies,Karnataka,Safety,23,10500,6000,4.1,87,Active
+S025,Automotive Components India,Tamil Nadu,Mechanical,12,15000,20000,4.5,94,Active
+S026,Vehicle Structure Systems,Maharashtra,Mechanical,18,17000,15000,4.3,90,Active
+S027,Automotive Mechanical Systems,Karnataka,Mechanical,20,18000,12000,4.1,87,Active
