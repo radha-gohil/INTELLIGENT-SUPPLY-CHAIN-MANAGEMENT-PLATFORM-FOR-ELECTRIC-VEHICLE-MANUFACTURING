@@ -1,0 +1,181 @@
+part_id,part_name,warehouse,available_stock,safety_stock,reorder_level,inventory_status,stock_ratio
+P001,Battery Pack,Chennai,7770,1705,2870,Healthy,2.707317073170732
+P001,Battery Pack,Hosur,5691,1080,1788,Healthy,3.1828859060402683
+P001,Battery Pack,Coimbatore,966,111,217,Healthy,4.451612903225806
+P001,Battery Pack,Chengalpattu,8822,909,2245,Healthy,3.929621380846325
+P002,Battery Cells,Chennai,7449,745,1856,Healthy,4.013469827586207
+P002,Battery Cells,Hosur,1684,245,496,Healthy,3.3951612903225805
+P002,Battery Cells,Coimbatore,9166,1757,2880,Healthy,3.182638888888889
+P002,Battery Cells,Chengalpattu,3247,503,983,Healthy,3.3031536113936926
+P003,Battery Management System,Chennai,3234,623,1172,Healthy,2.75938566552901
+P003,Battery Management System,Hosur,1767,333,514,Healthy,3.437743190661479
+P003,Battery Management System,Coimbatore,4390,886,1728,Healthy,2.540509259259259
+P003,Battery Management System,Chengalpattu,5893,1428,3520,Healthy,1.6741477272727272
+P004,Battery Module,Chennai,8933,1409,2135,Healthy,4.184074941451991
+P004,Battery Module,Hosur,7541,1528,2964,Healthy,2.544197031039136
+P004,Battery Module,Coimbatore,1275,134,322,Healthy,3.959627329192547
+P004,Battery Module,Chengalpattu,2085,415,751,Healthy,2.7762982689747004
+P005,Battery Enclosure,Chennai,4343,554,1368,Healthy,3.1747076023391814
+P005,Battery Enclosure,Hosur,7373,1234,2338,Healthy,3.1535500427715997
+P005,Battery Enclosure,Coimbatore,1495,283,685,Healthy,2.1824817518248176
+P005,Battery Enclosure,Chengalpattu,8129,1051,1624,Healthy,5.005541871921182
+P006,Busbar,Chennai,6939,1572,3532,Healthy,1.9646092865232163
+P006,Busbar,Hosur,1378,309,573,Healthy,2.404886561954625
+P006,Busbar,Coimbatore,5359,1023,1816,Healthy,2.9509911894273126
+P006,Busbar,Chengalpattu,5776,1272,2002,Healthy,2.885114885114885
+P007,Cell Connector,Chennai,8506,1390,2633,Healthy,3.230535510824155
+P007,Cell Connector,Hosur,3195,322,745,Healthy,4.2885906040268456
+P007,Cell Connector,Coimbatore,7236,1495,3423,Healthy,2.113935144609991
+P007,Cell Connector,Chengalpattu,6392,1527,3284,Healthy,1.946406820950061
+P008,Battery Sensor,Chennai,3599,825,1751,Healthy,2.0553969160479726
+P008,Battery Sensor,Hosur,3604,394,713,Healthy,5.054698457223002
+P008,Battery Sensor,Coimbatore,9496,1988,4249,Healthy,2.234878795010591
+P008,Battery Sensor,Chengalpattu,8654,1593,2999,Healthy,2.885628542847616
+P009,Battery Cooling Plate,Chennai,8610,1782,4028,Healthy,2.1375372393247267
+P009,Battery Cooling Plate,Hosur,7885,1067,1873,Healthy,4.209823812066204
+P009,Battery Cooling Plate,Coimbatore,7438,1327,2557,Healthy,2.9088775909268674
+P009,Battery Cooling Plate,Chengalpattu,8221,1363,2319,Healthy,3.545062526951272
+P010,Battery Safety Disconnect,Chennai,1363,266,482,Healthy,2.827800829875519
+P010,Battery Safety Disconnect,Hosur,6519,1539,2692,Healthy,2.4216196136701336
+P010,Battery Safety Disconnect,Coimbatore,7392,1337,2276,Healthy,3.24780316344464
+P010,Battery Safety Disconnect,Chengalpattu,7168,799,1430,Healthy,5.012587412587413
+P011,Electric Motor,Chennai,3657,848,1801,Healthy,2.030538589672404
+P011,Electric Motor,Hosur,3193,537,922,Healthy,3.463123644251627
+P011,Electric Motor,Coimbatore,5950,884,1433,Healthy,4.152128401953942
+P011,Electric Motor,Chengalpattu,6092,899,1447,Healthy,4.210089841050449
+P012,Motor Controller,Chennai,1806,296,686,Healthy,2.63265306122449
+P012,Motor Controller,Hosur,6364,927,1543,Healthy,4.124432922877511
+P012,Motor Controller,Coimbatore,6030,980,1687,Healthy,3.5743924125666866
+P012,Motor Controller,Chengalpattu,1163,280,510,Healthy,2.280392156862745
+P013,Reduction Gearbox,Chennai,1995,409,762,Healthy,2.6181102362204722
+P013,Reduction Gearbox,Hosur,7085,1731,3032,Healthy,2.336741424802111
+P013,Reduction Gearbox,Coimbatore,8054,1168,2084,Healthy,3.86468330134357
+P013,Reduction Gearbox,Chengalpattu,1198,229,458,Healthy,2.6157205240174672
+P014,Differential,Chennai,1354,191,459,Healthy,2.9498910675381262
+P014,Differential,Hosur,5749,1032,2010,Healthy,2.8601990049751245
+P014,Differential,Coimbatore,6035,1140,1802,Healthy,3.349056603773585
+P014,Differential,Chengalpattu,4718,643,1480,Healthy,3.187837837837838
+P015,Drive Shaft,Chennai,8504,1656,3533,Healthy,2.4070195301443533
+P015,Drive Shaft,Hosur,2430,540,1241,Healthy,1.9580983078162773
+P015,Drive Shaft,Coimbatore,9839,1733,3805,Healthy,2.5858081471747703
+P015,Drive Shaft,Chengalpattu,1159,172,295,Healthy,3.928813559322034
+P016,Inverter,Chennai,2486,550,1016,Healthy,2.4468503937007875
+P016,Inverter,Hosur,2234,281,615,Healthy,3.632520325203252
+P016,Inverter,Coimbatore,6259,1111,2597,Healthy,2.4100885637273777
+P016,Inverter,Chengalpattu,2302,347,559,Healthy,4.1180679785330945
+P017,DC-DC Converter,Chennai,6034,1397,2455,Healthy,2.4578411405295317
+P017,DC-DC Converter,Hosur,6787,1510,3103,Healthy,2.187238156622623
+P017,DC-DC Converter,Coimbatore,2549,635,1565,Healthy,1.6287539936102235
+P017,DC-DC Converter,Chengalpattu,5048,1186,2529,Healthy,1.996045867931989
+P018,Power Distribution Unit,Chennai,7900,1203,2677,Healthy,2.9510646245797534
+P018,Power Distribution Unit,Hosur,1654,377,717,Healthy,2.306834030683403
+P018,Power Distribution Unit,Coimbatore,2148,266,638,Healthy,3.366771159874608
+P018,Power Distribution Unit,Chengalpattu,8945,906,1450,Healthy,6.1689655172413795
+P019,High Voltage Contactor,Chennai,598,147,262,Healthy,2.282442748091603
+P019,High Voltage Contactor,Hosur,5473,997,2185,Healthy,2.504805491990847
+P019,High Voltage Contactor,Coimbatore,1456,194,429,Healthy,3.393939393939394
+P019,High Voltage Contactor,Chengalpattu,7444,1295,2174,Healthy,3.4241030358785647
+P020,High Voltage Fuse,Chennai,6515,1378,3060,Healthy,2.1290849673202614
+P020,High Voltage Fuse,Hosur,5235,969,1544,Healthy,3.3905440414507773
+P020,High Voltage Fuse,Coimbatore,8550,1671,2925,Healthy,2.923076923076923
+P020,High Voltage Fuse,Chengalpattu,2193,539,1020,Healthy,2.15
+P021,On-board Charger,Chennai,6395,1244,2854,Healthy,2.2407147862648915
+P021,On-board Charger,Hosur,5393,1061,2301,Healthy,2.3437635810517166
+P021,On-board Charger,Coimbatore,6100,788,1751,Healthy,3.4837235865219873
+P021,On-board Charger,Chengalpattu,8183,848,1819,Healthy,4.498625618471688
+P022,Charging Port,Chennai,8708,2169,4272,Healthy,2.0383895131086143
+P022,Charging Port,Hosur,1569,372,695,Healthy,2.257553956834532
+P022,Charging Port,Coimbatore,1560,373,719,Healthy,2.1696801112656465
+P022,Charging Port,Chengalpattu,1106,270,635,Healthy,1.741732283464567
+P023,Charging Cable,Chennai,690,100,169,Healthy,4.0828402366863905
+P023,Charging Cable,Hosur,1684,248,414,Healthy,4.067632850241546
+P023,Charging Cable,Coimbatore,2316,368,862,Healthy,2.6867749419953597
+P023,Charging Cable,Chengalpattu,5942,1102,1760,Healthy,3.3761363636363635
+P024,High Voltage Connector,Chennai,7955,1596,2966,Healthy,2.682063385030344
+P024,High Voltage Connector,Hosur,8306,1476,3509,Healthy,2.367056141350812
+P024,High Voltage Connector,Coimbatore,1284,291,476,Healthy,2.697478991596639
+P024,High Voltage Connector,Chengalpattu,7843,1434,2576,Healthy,3.044642857142857
+P025,Thermal Management System,Chennai,1037,229,542,Healthy,1.9132841328413284
+P025,Thermal Management System,Hosur,9216,1034,1556,Healthy,5.922879177377892
+P025,Thermal Management System,Coimbatore,5280,681,1069,Healthy,4.939195509822264
+P025,Thermal Management System,Chengalpattu,8673,1902,4545,Healthy,1.9082508250825083
+P026,Cooling Pump,Chennai,7114,740,1538,Healthy,4.625487646293888
+P026,Cooling Pump,Hosur,6419,1198,1840,Healthy,3.4885869565217393
+P026,Cooling Pump,Coimbatore,4269,774,1382,Healthy,3.0890014471780027
+P026,Cooling Pump,Chengalpattu,6957,1593,2788,Healthy,2.4953371592539453
+P027,Cooling Fan,Chennai,5277,1178,2191,Healthy,2.408489274303971
+P027,Cooling Fan,Hosur,2991,445,1035,Healthy,2.889855072463768
+P027,Cooling Fan,Coimbatore,6191,819,1738,Healthy,3.5621403912543155
+P027,Cooling Fan,Chengalpattu,5815,1315,2228,Healthy,2.609964093357271
+P028,Radiator,Chennai,4642,951,1558,Healthy,2.9794608472400514
+P028,Radiator,Hosur,7299,1798,3625,Healthy,2.0135172413793105
+P028,Radiator,Coimbatore,2193,232,440,Healthy,4.984090909090909
+P028,Radiator,Chengalpattu,5677,634,967,Healthy,5.8707342295760085
+P029,Coolant,Chennai,8808,987,1903,Healthy,4.628481345244351
+P029,Coolant,Hosur,2431,392,655,Healthy,3.711450381679389
+P029,Coolant,Coimbatore,1012,168,292,Healthy,3.4657534246575343
+P029,Coolant,Chengalpattu,5737,1188,2566,Healthy,2.235775526110678
+P030,High Voltage Cable,Chennai,3843,682,1471,Healthy,2.612508497620666
+P030,High Voltage Cable,Hosur,1080,207,397,Healthy,2.720403022670025
+P030,High Voltage Cable,Coimbatore,3647,674,1117,Healthy,3.2649955237242616
+P030,High Voltage Cable,Chengalpattu,7753,792,1279,Healthy,6.061767005473026
+P031,Wiring Harness,Chennai,5688,649,1175,Healthy,4.8408510638297875
+P031,Wiring Harness,Hosur,7117,1236,2439,Healthy,2.9179991799917997
+P031,Wiring Harness,Coimbatore,7921,1307,2481,Healthy,3.192664248286981
+P031,Wiring Harness,Chengalpattu,7165,1736,4143,Healthy,1.7294231233405744
+P032,12V Auxiliary Battery,Chennai,7890,807,1963,Healthy,4.01935812531839
+P032,12V Auxiliary Battery,Hosur,9707,1929,3207,Healthy,3.0268163392578735
+P032,12V Auxiliary Battery,Coimbatore,3339,806,1970,Healthy,1.6949238578680204
+P032,12V Auxiliary Battery,Chengalpattu,9587,1873,4309,Healthy,2.2248781619865396
+P033,Low Voltage Connector,Chennai,7333,1363,2219,Healthy,3.3046417305092386
+P033,Low Voltage Connector,Hosur,5552,1009,2463,Healthy,2.254161591555014
+P033,Low Voltage Connector,Coimbatore,8502,1896,4079,Healthy,2.084334395685217
+P033,Low Voltage Connector,Chengalpattu,1566,202,317,Healthy,4.94006309148265
+P034,Vehicle Control Unit,Chennai,6226,974,1498,Healthy,4.1562082777036045
+P034,Vehicle Control Unit,Hosur,9445,1912,3004,Healthy,3.144141145139814
+P034,Vehicle Control Unit,Coimbatore,9467,1493,3257,Healthy,2.9066625729198647
+P034,Vehicle Control Unit,Chengalpattu,917,127,253,Healthy,3.624505928853755
+P035,Electronic Control Module,Chennai,1325,270,574,Healthy,2.308362369337979
+P035,Electronic Control Module,Hosur,912,96,184,Healthy,4.956521739130435
+P035,Electronic Control Module,Coimbatore,7664,1090,1828,Healthy,4.192560175054704
+P035,Electronic Control Module,Chengalpattu,3004,556,1154,Healthy,2.603119584055459
+P036,CAN Communication Module,Chennai,1622,262,490,Healthy,3.3102040816326532
+P036,CAN Communication Module,Hosur,2643,399,969,Healthy,2.7275541795665634
+P036,CAN Communication Module,Coimbatore,3940,795,1780,Healthy,2.2134831460674156
+P036,CAN Communication Module,Chengalpattu,3414,394,946,Healthy,3.6088794926004226
+P037,Vehicle Display Unit,Chennai,9287,2079,3783,Healthy,2.4549299497753108
+P037,Vehicle Display Unit,Hosur,1198,137,212,Healthy,5.650943396226415
+P037,Vehicle Display Unit,Coimbatore,7900,1793,3325,Healthy,2.3759398496240602
+P037,Vehicle Display Unit,Chengalpattu,1217,245,485,Healthy,2.509278350515464
+P038,Insulation Monitoring Device,Chennai,5986,673,1071,Healthy,5.5891690009337065
+P038,Insulation Monitoring Device,Hosur,4991,745,1618,Healthy,3.084672435105068
+P038,Insulation Monitoring Device,Coimbatore,8151,1971,4496,Healthy,1.8129448398576513
+P038,Insulation Monitoring Device,Chengalpattu,1562,177,353,Healthy,4.424929178470255
+P039,Crash Sensor,Chennai,7041,1284,2492,Healthy,2.8254414125200644
+P039,Crash Sensor,Hosur,5834,1061,2340,Healthy,2.493162393162393
+P039,Crash Sensor,Coimbatore,5346,649,1467,Healthy,3.644171779141104
+P039,Crash Sensor,Chengalpattu,3039,699,1634,Healthy,1.8598531211750307
+P040,Emergency Disconnect,Chennai,5793,1188,1868,Healthy,3.1011777301927195
+P040,Emergency Disconnect,Hosur,7438,1531,2421,Healthy,3.0722841800908713
+P040,Emergency Disconnect,Coimbatore,6041,1498,2807,Healthy,2.1521197007481296
+P040,Emergency Disconnect,Chengalpattu,1865,413,1010,Healthy,1.8465346534653466
+P041,Vehicle Chassis,Chennai,4812,908,1679,Healthy,2.865991661703395
+P041,Vehicle Chassis,Hosur,7919,891,2028,Healthy,3.9048323471400392
+P041,Vehicle Chassis,Coimbatore,5801,1193,2086,Healthy,2.780920421860019
+P041,Vehicle Chassis,Chengalpattu,4768,484,952,Healthy,5.008403361344538
+P042,Suspension Assembly,Chennai,9773,2063,4677,Healthy,2.089587342313449
+P042,Suspension Assembly,Hosur,9586,1892,4249,Healthy,2.2560602494704636
+P042,Suspension Assembly,Coimbatore,1004,156,278,Healthy,3.6115107913669067
+P042,Suspension Assembly,Chengalpattu,1323,237,458,Healthy,2.888646288209607
+P043,Brake Assembly,Chennai,2605,265,654,Healthy,3.9831804281345566
+P043,Brake Assembly,Hosur,2352,349,538,Healthy,4.371747211895911
+P043,Brake Assembly,Coimbatore,5848,806,1769,Healthy,3.3058224985867724
+P043,Brake Assembly,Chengalpattu,6690,1300,2854,Healthy,2.3440784863349684
+P044,Steering Assembly,Chennai,3986,994,2183,Healthy,1.825927622537792
+P044,Steering Assembly,Hosur,3830,900,1390,Healthy,2.7553956834532376
+P044,Steering Assembly,Coimbatore,1853,449,1073,Healthy,1.7269338303821062
+P044,Steering Assembly,Chengalpattu,8075,1558,2769,Healthy,2.9162152401589023
+P045,Wheel Assembly,Chennai,7319,1240,2298,Healthy,3.1849434290687553
+P045,Wheel Assembly,Hosur,1039,116,287,Healthy,3.6202090592334493
+P045,Wheel Assembly,Coimbatore,4275,718,1100,Healthy,3.8863636363636362
+P045,Wheel Assembly,Chengalpattu,5820,852,1971,Healthy,2.9528158295281584
