@@ -5,30 +5,44 @@ from pydantic import BaseModel
 
 class SupplierMetricsResponse(BaseModel):
 
+    # ========================================================
+    # SUPPLIER
+    # ========================================================
+
     supplier_id: int
     supplier_code: str
     supplier_name: str
 
     # ========================================================
-    # DATA SOURCE INFORMATION
+    # DATA AVAILABILITY
     # ========================================================
 
     performance_data_available: bool
 
     # ========================================================
-    # HISTORICAL PROCUREMENT METRICS
+    # HISTORICAL ORDER METRICS
     # ========================================================
 
     total_orders: int
+
     on_time_orders: int
+
     late_orders: int
 
-    ordered_quantity: int
-    received_quantity: int
-    defective_quantity: int
+    ordered_quantity: float
+
+    received_quantity: float
+
+    defective_quantity: float
+
+    # ========================================================
+    # PERFORMANCE METRICS
+    # ========================================================
 
     on_time_delivery_rate: float
+
     fill_rate: float
+
     defect_rate: float
 
     average_delay_days: float
@@ -50,3 +64,5 @@ class SupplierMetricsResponse(BaseModel):
     baseline_reliability_score: Optional[float] = None
 
     reliability_score: float
+
+    reliability_source: str

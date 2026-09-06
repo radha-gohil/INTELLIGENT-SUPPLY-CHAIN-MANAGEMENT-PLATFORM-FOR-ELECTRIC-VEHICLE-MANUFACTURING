@@ -7,12 +7,13 @@ from pydantic import BaseModel
 class SupplierIntelligenceResponse(BaseModel):
 
     # ========================================================
-    # SUPPLIER
+    # SUPPLIER MASTER
     # ========================================================
 
     supplier_id: int
 
     supplier_code: str
+
     supplier_name: str
 
     supplier_location: Optional[str] = None
@@ -21,9 +22,35 @@ class SupplierIntelligenceResponse(BaseModel):
 
     component_category: Optional[str] = None
 
+
+    # ========================================================
+    # MASTER QUALITY / RELIABILITY
+    # ========================================================
+
+    # Normalized 0 - 5
     quality_rating: Optional[float] = None
 
+    # Normalized 0 - 100
     baseline_reliability_score: Optional[float] = None
+
+
+    # ========================================================
+    # OPERATIONAL PERFORMANCE
+    # ========================================================
+
+    performance_data_available: bool
+
+    on_time_delivery_rate: float
+
+    fill_rate: float
+
+    quality_score: float
+
+    quality_source: str
+
+    operational_reliability_score: float
+
+    reliability_source: str
 
 
     # ========================================================
@@ -51,7 +78,7 @@ class SupplierIntelligenceResponse(BaseModel):
 
 
     # ========================================================
-    # DYNAMIC AVAILABILITY
+    # SUPPLIER AVAILABILITY
     # ========================================================
 
     availability_data_available: bool

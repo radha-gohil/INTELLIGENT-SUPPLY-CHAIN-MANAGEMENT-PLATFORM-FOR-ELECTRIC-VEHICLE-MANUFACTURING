@@ -1,12 +1,34 @@
-import os
+from functools import lru_cache
+from pathlib import Path
+
 import joblib
 import pandas as pd
 
 from sqlalchemy.orm import Session
 
 from backend.app.models import (
-    Supplier,
-    SupplierPerformance
+    Supplier
+)
+
+from backend.app.service.supplier_performance_service import (
+    SupplierPerformanceService
+)
+
+
+# ============================================================
+# PROJECT ROOT
+# ============================================================
+
+PROJECT_ROOT = (
+
+    Path(
+        __file__
+    )
+
+    .resolve()
+
+    .parents[3]
+
 )
 
 
@@ -15,12 +37,88 @@ from backend.app.models import (
 # ============================================================
 
 MODEL_PATH = (
-    "backend/app/ml/models/supplier_risk_xgboost.pkl"
+
+    PROJECT_ROOT
+
+    /
+
+    "backend"
+
+    /
+
+    "app"
+
+    /
+
+    "ml"
+
+    /
+
+    "models"
+
+    /
+
+    "supplier_risk_xgboost.pkl"
+
 )
 
+
 ENCODER_PATH = (
-    "backend/app/ml/models/supplier_risk_label_encoder.pkl"
+
+    PROJECT_ROOT
+
+    /
+
+    "backend"
+
+    /
+
+    "app"
+
+    /
+
+    "ml"
+
+    /
+
+    "models"
+
+    /
+
+    "supplier_risk_label_encoder.pkl"
+
 )
+
+
+# ============================================================
+# AUTHORITATIVE FEATURE LIST
+# ============================================================
+#
+# IMPORTANT:
+#
+# This MUST exactly match:
+#
+# train_supplier_risk_model.py
+#
+# ============================================================
+
+FEATURE_COLUMNS = [
+
+    "total_orders",
+
+    "late_order_rate",
+
+    "on_time_delivery_rate",
+
+    "fill_rate",
+
+    "average_delay_days",
+
+    "quality_score",
+
+    "baseline_reliability_score"
+
+]
 
 
 # ============================================================
@@ -29,34 +127,70 @@ ENCODER_PATH = (
 
 class SupplierRiskService:
 
+
     # ========================================================
     # LOAD MODEL
     # ========================================================
 
     @staticmethod
+    @lru_cache(
+        maxsize=1
+    )
     def load_model():
 
-        if not os.path.exists(MODEL_PATH):
+        # ----------------------------------------------------
+        # Model
+        # ----------------------------------------------------
+
+        if not MODEL_PATH.exists():
 
             raise FileNotFoundError(
-                "Supplier risk XGBoost model not found."
+
+                "Supplier risk XGBoost model "
+                "not found: "
+                +
+                str(
+                    MODEL_PATH
+                )
+
             )
 
-        if not os.path.exists(ENCODER_PATH):
+
+        # ----------------------------------------------------
+        # Label encoder
+        # ----------------------------------------------------
+
+        if not ENCODER_PATH.exists():
 
             raise FileNotFoundError(
-                "Supplier risk label encoder not found."
+
+                "Supplier risk label encoder "
+                "not found: "
+                +
+                str(
+                    ENCODER_PATH
+                )
+
             )
+
 
         model = joblib.load(
             MODEL_PATH
         )
 
+
         label_encoder = joblib.load(
             ENCODER_PATH
         )
 
-        return model, label_encoder
+
+        return (
+
+            model,
+
+            label_encoder
+
+        )
 
 
     # ========================================================
@@ -65,21 +199,31 @@ class SupplierRiskService:
 
     @staticmethod
     def get_supplier(
+
         db: Session,
+
         supplier_id: int
+
     ):
 
         supplier = (
 
-            db.query(Supplier)
+            db.query(
+                Supplier
+            )
 
             .filter(
-                Supplier.id == supplier_id
+
+                Supplier.id
+                ==
+                supplier_id
+
             )
 
             .first()
 
         )
+
 
         if supplier is None:
 
@@ -87,148 +231,80 @@ class SupplierRiskService:
                 "Supplier not found."
             )
 
+
         return supplier
 
 
     # ========================================================
-    # GET SUPPLIER PERFORMANCE
-    # ========================================================
-
-    @staticmethod
-    def get_supplier_performance(
-        db: Session,
-        supplier_id: int
-    ):
-
-        records = (
-
-            db.query(SupplierPerformance)
-
-            .filter(
-
-                SupplierPerformance.supplier_id
-                == supplier_id
-
-            )
-
-            .all()
-
-        )
-
-        if not records:
-
-            raise ValueError(
-                "No supplier performance data available."
-            )
-
-        return records
-
-
-    # ========================================================
-    # BUILD ML FEATURES
+    # BUILD LIVE XGBOOST FEATURES
     # ========================================================
 
     @staticmethod
     def build_features(
-        records
+        performance: dict
     ):
 
         # ----------------------------------------------------
-        # Aggregate historical supplier data
+        # Model needs historical supplier performance.
         # ----------------------------------------------------
 
-        total_orders = sum(
+        if not performance.get(
+            "performance_data_available"
+        ):
 
-            record.total_orders
+            raise ValueError(
 
-            for record in records
-
-        )
-
-
-        on_time_orders = sum(
-
-            record.on_time_orders
-
-            for record in records
-
-        )
-
-
-        late_orders = sum(
-
-            record.late_orders
-
-            for record in records
-
-        )
-
-
-        ordered_quantity = sum(
-
-            record.ordered_quantity
-
-            for record in records
-
-        )
-
-
-        received_quantity = sum(
-
-            record.received_quantity
-
-            for record in records
-
-        )
-
-
-        defective_quantity = sum(
-
-            record.defective_quantity
-
-            for record in records
-
-        )
-
-
-        # ----------------------------------------------------
-        # Average delay
-        # ----------------------------------------------------
-
-        total_delay = sum(
-
-            record.average_delay_days
-            * record.late_orders
-
-            for record in records
-
-        )
-
-
-        if late_orders > 0:
-
-            average_delay_days = (
-
-                total_delay
-                /
-                late_orders
+                "No supplier performance data "
+                "available for AI risk prediction."
 
             )
 
-        else:
 
-            average_delay_days = 0.0
+        # ====================================================
+        # TOTAL ORDERS
+        # ====================================================
+
+        total_orders = float(
+
+            performance.get(
+                "total_orders",
+                0
+            )
+
+            or
+
+            0
+
+        )
 
 
-        # ----------------------------------------------------
-        # On-time delivery rate
-        # ----------------------------------------------------
+        # ====================================================
+        # LATE ORDERS
+        # ====================================================
+
+        late_orders = float(
+
+            performance.get(
+                "late_orders",
+                0
+            )
+
+            or
+
+            0
+
+        )
+
+
+        # ====================================================
+        # LATE ORDER RATE
+        # ====================================================
 
         if total_orders > 0:
 
-            on_time_delivery_rate = (
+            late_order_rate = (
 
-                on_time_orders
+                late_orders
                 /
                 total_orders
 
@@ -236,90 +312,246 @@ class SupplierRiskService:
 
         else:
 
-            on_time_delivery_rate = 0.0
+            late_order_rate = 0.0
 
 
-        # ----------------------------------------------------
-        # Fill rate
-        # ----------------------------------------------------
+        late_order_rate = max(
 
-        if ordered_quantity > 0:
+            0.0,
 
-            fill_rate = (
+            min(
+                100.0,
+                late_order_rate
+            )
 
-                received_quantity
-                /
-                ordered_quantity
-
-            ) * 100
-
-        else:
-
-            fill_rate = 0.0
+        )
 
 
-        # ----------------------------------------------------
-        # Defect rate
-        # ----------------------------------------------------
+        # ====================================================
+        # BASELINE RELIABILITY
+        # ====================================================
 
-        if received_quantity > 0:
+        baseline_reliability_score = (
 
-            defect_rate = (
+            performance.get(
+                "baseline_reliability_score"
+            )
 
-                defective_quantity
-                /
-                received_quantity
-
-            ) * 100
-
-        else:
-
-            defect_rate = 0.0
+        )
 
 
-        # ----------------------------------------------------
-        # Create DataFrame
-        #
-        # IMPORTANT:
-        # Column order must match training.
-        # ----------------------------------------------------
+        if baseline_reliability_score is None:
 
-        features = pd.DataFrame([{
+            baseline_reliability_score = 50.0
+
+
+        # ====================================================
+        # QUALITY
+        # ====================================================
+
+        quality_score = (
+
+            performance.get(
+                "quality_score"
+            )
+
+        )
+
+
+        if quality_score is None:
+
+            quality_score = 50.0
+
+
+        # ====================================================
+        # FEATURE ROW
+        # ====================================================
+
+        feature_row = {
 
             "total_orders":
+
                 total_orders,
 
-            "on_time_orders":
-                on_time_orders,
 
-            "late_orders":
-                late_orders,
+            "late_order_rate":
 
-            "ordered_quantity":
-                ordered_quantity,
+                late_order_rate,
 
-            "received_quantity":
-                received_quantity,
-
-            "defective_quantity":
-                defective_quantity,
 
             "on_time_delivery_rate":
-                on_time_delivery_rate,
+
+                float(
+
+                    performance.get(
+                        "on_time_delivery_rate",
+                        0
+                    )
+
+                    or
+
+                    0
+
+                ),
+
 
             "fill_rate":
-                fill_rate,
 
-            "defect_rate":
-                defect_rate,
+                float(
+
+                    performance.get(
+                        "fill_rate",
+                        0
+                    )
+
+                    or
+
+                    0
+
+                ),
+
 
             "average_delay_days":
-                average_delay_days
 
-        }])
+                max(
+
+                    0.0,
+
+                    float(
+
+                        performance.get(
+                            "average_delay_days",
+                            0
+                        )
+
+                        or
+
+                        0
+
+                    )
+
+                ),
+
+
+            "quality_score":
+
+                float(
+                    quality_score
+                ),
+
+
+            "baseline_reliability_score":
+
+                float(
+                    baseline_reliability_score
+                )
+
+        }
+
+
+        # ====================================================
+        # DATAFRAME
+        #
+        # Explicit column order prevents model mismatch.
+        # ====================================================
+
+        features = pd.DataFrame(
+
+            [
+                feature_row
+            ],
+
+            columns=(
+                FEATURE_COLUMNS
+            )
+
+        )
 
 
         return features
+
+
+    # ========================================================
+    # VALIDATE MODEL FEATURES
+    # ========================================================
+
+    @staticmethod
+    def validate_model_features(
+        model
+    ):
+
+        # ----------------------------------------------------
+        # sklearn-style feature list
+        # ----------------------------------------------------
+
+        model_features = getattr(
+
+            model,
+
+            "feature_names_in_",
+
+            None
+
+        )
+
+
+        # ----------------------------------------------------
+        # XGBoost booster feature list fallback
+        # ----------------------------------------------------
+
+        if model_features is None:
+
+            try:
+
+                model_features = (
+
+                    model
+                    .get_booster()
+                    .feature_names
+
+                )
+
+            except Exception:
+
+                model_features = None
+
+
+        # ----------------------------------------------------
+        # Older model formats may not expose feature names.
+        # ----------------------------------------------------
+
+        if model_features is None:
+
+            return
+
+
+        model_features = list(
+            model_features
+        )
+
+
+        if (
+            model_features
+            !=
+            FEATURE_COLUMNS
+        ):
+
+            raise ValueError(
+
+                "XGBoost model feature mismatch. "
+
+                "Regenerate the supplier risk dataset "
+                "and retrain the model. "
+
+                "Expected features: "
+
+                +
+
+                ", ".join(
+                    FEATURE_COLUMNS
+                )
+
+            )
 
 
     # ========================================================
@@ -328,13 +560,16 @@ class SupplierRiskService:
 
     @staticmethod
     def predict_supplier_risk(
+
         db: Session,
+
         supplier_id: int
+
     ):
 
-        # ----------------------------------------------------
-        # Get supplier
-        # ----------------------------------------------------
+        # ====================================================
+        # SUPPLIER
+        # ====================================================
 
         supplier = (
 
@@ -350,14 +585,14 @@ class SupplierRiskService:
         )
 
 
-        # ----------------------------------------------------
-        # Get performance
-        # ----------------------------------------------------
+        # ====================================================
+        # SINGLE SOURCE OF PERFORMANCE METRICS
+        # ====================================================
 
-        records = (
+        performance = (
 
-            SupplierRiskService
-            .get_supplier_performance(
+            SupplierPerformanceService
+            .calculate_supplier_performance(
 
                 db,
 
@@ -368,27 +603,30 @@ class SupplierRiskService:
         )
 
 
-        # ----------------------------------------------------
-        # Build features
-        # ----------------------------------------------------
+        # ====================================================
+        # MODEL FEATURES
+        # ====================================================
 
         features = (
 
             SupplierRiskService
             .build_features(
-
-                records
-
+                performance
             )
 
         )
 
 
-        # ----------------------------------------------------
-        # Load trained model
-        # ----------------------------------------------------
+        # ====================================================
+        # LOAD MODEL
+        # ====================================================
 
-        model, label_encoder = (
+        (
+            model,
+
+            label_encoder
+
+        ) = (
 
             SupplierRiskService
             .load_model()
@@ -396,9 +634,19 @@ class SupplierRiskService:
         )
 
 
-        # ----------------------------------------------------
-        # Predict class
-        # ----------------------------------------------------
+        # ====================================================
+        # FEATURE CONTRACT CHECK
+        # ====================================================
+
+        SupplierRiskService \
+            .validate_model_features(
+                model
+            )
+
+
+        # ====================================================
+        # PREDICT CLASS
+        # ====================================================
 
         prediction = model.predict(
             features
@@ -410,19 +658,27 @@ class SupplierRiskService:
         )
 
 
-        risk_level = (
+        # ====================================================
+        # DECODE CLASS
+        # ====================================================
+
+        risk_level = str(
 
             label_encoder
             .inverse_transform(
-                [predicted_class]
+
+                [
+                    predicted_class
+                ]
+
             )[0]
 
         )
 
 
-        # ----------------------------------------------------
-        # Prediction probabilities
-        # ----------------------------------------------------
+        # ====================================================
+        # CLASS PROBABILITIES
+        # ====================================================
 
         probabilities = (
 
@@ -434,23 +690,30 @@ class SupplierRiskService:
         )
 
 
-        # ----------------------------------------------------
-        # Build probability dictionary
-        # ----------------------------------------------------
-
         risk_probabilities = {}
 
 
-        for index, label in enumerate(
+        for (
+            index,
+            label
+        ) in enumerate(
 
             label_encoder.classes_
 
         ):
 
-            risk_probabilities[label] = round(
+            risk_probabilities[
+                str(
+                    label
+                )
+            ] = round(
 
                 float(
-                    probabilities[index]
+
+                    probabilities[
+                        index
+                    ]
+
                 ),
 
                 4
@@ -458,14 +721,18 @@ class SupplierRiskService:
             )
 
 
-        # ----------------------------------------------------
-        # Highest probability
-        # ----------------------------------------------------
+        # ====================================================
+        # CONFIDENCE
+        # ====================================================
 
         confidence = round(
 
             float(
-                max(probabilities)
+
+                max(
+                    probabilities
+                )
+
             ),
 
             4
@@ -473,9 +740,9 @@ class SupplierRiskService:
         )
 
 
-        # ----------------------------------------------------
-        # Return prediction
-        # ----------------------------------------------------
+        # ====================================================
+        # RESPONSE
+        # ====================================================
 
         return {
 

@@ -15,8 +15,7 @@ env/
 .ipynb_checkpoints/
 
 # Data
-*.parquet
-*.pkl
+
 *.joblib
 
 # IDE

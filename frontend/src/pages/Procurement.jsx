@@ -41,7 +41,6 @@ import StoreIcon from "@mui/icons-material/Store";
 import {
   getProcurementDecision,
   getSupplierIntelligence,
-  getSupplierRisk,
   getInventoryByComponent,
   createPurchaseOrder
 } from "../services/api";
@@ -645,13 +644,37 @@ function normalizeSupplier(
       ),
 
     risk_level:
-      "UNAVAILABLE",
+      String(
+        getValue(
+          option,
+          [
+            "ai_risk_level",
+            "risk_level"
+          ],
+          "UNAVAILABLE"
+        )
+      ).toUpperCase(),
 
     risk_confidence:
-      null,
+      getValue(
+        option,
+        [
+          "ai_risk_confidence",
+          "risk_confidence",
+          "confidence"
+        ],
+        null
+      ),
 
     risk_probabilities:
-      null,
+      getValue(
+        option,
+        [
+          "ai_risk_probabilities",
+          "risk_probabilities"
+        ],
+        null
+      ),
 
     raw:
       option
@@ -1307,63 +1330,15 @@ function Procurement({
 
 
       // ------------------------------------------------------
-      // GET AI RISK FOR EACH SUPPLIER
+      // AI RISK IS ALREADY PART OF THE PROCUREMENT DECISION
       // ------------------------------------------------------
-
-      normalized =
-        await Promise.all(
-
-          normalized.map(
-            async supplier => {
-
-              try {
-
-                const risk =
-                  await getSupplierRisk(
-                    supplier.supplier_id
-                  );
-
-
-                return {
-
-                  ...supplier,
-
-                  risk_level:
-                    risk?.risk_level ||
-                    "UNAVAILABLE",
-
-                  risk_confidence:
-                    risk?.confidence ??
-                    null,
-
-                  risk_probabilities:
-                    risk?.risk_probabilities ??
-                    null
-
-                };
-
-              }
-
-              catch (riskError) {
-
-                console.error(
-
-                  `Risk unavailable for supplier ${supplier.supplier_id}:`,
-
-                  riskError
-
-                );
-
-
-                return supplier;
-
-              }
-
-            }
-          )
-
-        );
-
+      //
+      // The backend recommendation endpoint calculates the
+      // XGBoost supplier risk and uses that same risk in the
+      // weighted final score. Do not call /supplier-risk again
+      // here, otherwise the displayed risk can drift from the
+      // risk used for ranking.
+      // ------------------------------------------------------
 
       setSuppliers(
         normalized
@@ -2388,7 +2363,7 @@ function Procurement({
                   variant="body2"
                   color="text.secondary"
                 >
-                  Suppliers are returned by the existing procurement decision engine and enriched with AI risk and commercial terms.
+                  Suppliers are ranked by the procurement decision engine using availability, fulfillment, reliability, quality, AI risk, price and lead time.
                 </Typography>
 
               </Box>

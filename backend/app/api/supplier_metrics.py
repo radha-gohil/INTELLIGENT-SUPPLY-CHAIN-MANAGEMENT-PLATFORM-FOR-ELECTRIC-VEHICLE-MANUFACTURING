@@ -17,15 +17,13 @@ from backend.app.schemas.supplier_metrics import (
 # ============================================================
 
 router = APIRouter(
-
     prefix="/supplier-metrics",
-
     tags=["Supplier Metrics"]
 )
 
 
 # ============================================================
-# DATABASE
+# DATABASE DEPENDENCY
 # ============================================================
 
 def get_db():
@@ -42,49 +40,6 @@ def get_db():
 
 
 # ============================================================
-# GET ONE SUPPLIER METRICS
-# ============================================================
-
-@router.get(
-    "/supplier/{supplier_id}",
-    response_model=SupplierMetricsResponse
-)
-def get_supplier_metrics(
-
-    supplier_id: int,
-
-    db: Session = Depends(get_db)
-
-):
-
-    try:
-
-        result = (
-
-            SupplierPerformanceService
-            .calculate_supplier_performance(
-
-                db,
-
-                supplier_id
-
-            )
-        )
-
-        return result
-
-    except ValueError as e:
-
-        raise HTTPException(
-
-            status_code=404,
-
-            detail=str(e)
-
-        )
-
-
-# ============================================================
 # GET ALL SUPPLIER METRICS
 # ============================================================
 
@@ -93,19 +48,75 @@ def get_supplier_metrics(
     response_model=list[SupplierMetricsResponse]
 )
 def get_all_supplier_metrics(
-
     db: Session = Depends(get_db)
-
 ):
 
-    results = (
+    try:
 
-        SupplierPerformanceService
-        .calculate_all_suppliers(
+        results = (
 
-            db
+            SupplierPerformanceService
+            .calculate_all_suppliers(
+                db
+            )
 
         )
-    )
 
-    return results
+        return results
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Unable to calculate supplier metrics: "
+                + str(e)
+            )
+        )
+
+
+# ============================================================
+# GET ONE SUPPLIER METRICS
+# ============================================================
+
+@router.get(
+    "/supplier/{supplier_id}",
+    response_model=SupplierMetricsResponse
+)
+def get_supplier_metrics(
+    supplier_id: int,
+    db: Session = Depends(get_db)
+):
+
+    try:
+
+        result = (
+
+            SupplierPerformanceService
+            .calculate_supplier_performance(
+                db,
+                supplier_id
+            )
+
+        )
+
+        return result
+
+
+    except ValueError as e:
+
+        raise HTTPException(
+            status_code=404,
+            detail=str(e)
+        )
+
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Unable to calculate supplier metrics: "
+                + str(e)
+            )
+        )

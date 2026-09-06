@@ -21,19 +21,20 @@ from backend.app.schemas.supplier_intelligence import (
     SupplierIntelligenceResponse
 )
 
+from backend.app.service.supplier_performance_service import (
+    SupplierPerformanceService
+)
+
 
 # ============================================================
 # ROUTER
 # ============================================================
 
 router = APIRouter(
-
     prefix="/supplier-intelligence",
-
     tags=[
         "Supplier Intelligence"
     ]
-
 )
 
 
@@ -105,18 +106,42 @@ def get_supplier_intelligence(
 
 
     # ========================================================
-    # SUPPLIER-COMPONENT MAPPINGS
+    # APPROVED + ACTIVE SUPPLIER MAPPINGS
+    # ========================================================
+    #
+    # Important:
+    #
+    # Procurement intelligence should only consider:
+    #
+    # 1. Approved supplier-component mappings
+    # 2. Active suppliers
+    #
     # ========================================================
 
-    supplier_components = (
+    supplier_records = (
 
         db.query(
-            SupplierComponent
+            SupplierComponent,
+            Supplier
+        )
+
+        .join(
+            Supplier,
+            Supplier.id
+            == SupplierComponent.supplier_id
         )
 
         .filter(
+
             SupplierComponent.component_id
-            == component_id
+            == component_id,
+
+            SupplierComponent.is_approved
+            == True,
+
+            Supplier.is_active
+            == True
+
         )
 
         .all()
@@ -131,46 +156,74 @@ def get_supplier_intelligence(
     # BUILD SUPPLIER INTELLIGENCE
     # ========================================================
 
-    for supplier_component in supplier_components:
+    for (
+        supplier_component,
+        supplier
+    ) in supplier_records:
 
-        # ----------------------------------------------------
-        # Supplier
-        # ----------------------------------------------------
+        # ====================================================
+        # SUPPLIER PERFORMANCE
+        # ====================================================
 
-        supplier = (
+        performance = (
 
-            db.query(
-                Supplier
+            SupplierPerformanceService
+            .calculate_supplier_performance(
+
+                db,
+
+                supplier.id
+
             )
-
-            .filter(
-                Supplier.id
-                == supplier_component.supplier_id
-            )
-
-            .first()
 
         )
 
 
-        if supplier is None:
+        # ====================================================
+        # NORMALIZE MASTER QUALITY RATING
+        # ====================================================
+        #
+        # supplier_master.csv should normally contain:
+        #
+        # 4.5 -> 4.5 / 5
+        #
+        # But older imported data may contain:
+        #
+        # 90 -> 90 / 100
+        #
+        # Convert both to 0 - 5.
+        # ====================================================
 
-            continue
+        quality_score_from_master = (
+
+            SupplierPerformanceService
+            .quality_rating_to_score(
+                supplier.quality_rating
+            )
+
+        )
 
 
-        # ----------------------------------------------------
-        # Ignore inactive suppliers from procurement
-        # intelligence.
-        # ----------------------------------------------------
+        if quality_score_from_master is None:
 
-        if not supplier.is_active:
+            normalized_quality_rating = None
 
-            continue
+        else:
+
+            normalized_quality_rating = round(
+
+                quality_score_from_master
+                /
+                20,
+
+                2
+
+            )
 
 
-        # ----------------------------------------------------
-        # Dynamic availability
-        # ----------------------------------------------------
+        # ====================================================
+        # SUPPLIER AVAILABILITY
+        # ====================================================
 
         availability = (
 
@@ -194,7 +247,7 @@ def get_supplier_intelligence(
 
 
         # ====================================================
-        # AVAILABILITY STATE
+        # NO AVAILABILITY RECORD
         # ====================================================
 
         if availability is None:
@@ -213,6 +266,10 @@ def get_supplier_intelligence(
 
             last_updated = None
 
+
+        # ====================================================
+        # AVAILABILITY RECORD AVAILABLE
+        # ====================================================
 
         else:
 
@@ -277,11 +334,58 @@ def get_supplier_intelligence(
             "component_category":
                 supplier.component_category,
 
+
+            # ------------------------------------------------
+            # Master quality / reliability
+            # ------------------------------------------------
+
             "quality_rating":
-                supplier.quality_rating,
+                normalized_quality_rating,
 
             "baseline_reliability_score":
-                supplier.baseline_reliability_score,
+                performance[
+                    "baseline_reliability_score"
+                ],
+
+
+            # ------------------------------------------------
+            # Operational performance
+            # ------------------------------------------------
+
+            "performance_data_available":
+                performance[
+                    "performance_data_available"
+                ],
+
+            "on_time_delivery_rate":
+                performance[
+                    "on_time_delivery_rate"
+                ],
+
+            "fill_rate":
+                performance[
+                    "fill_rate"
+                ],
+
+            "quality_score":
+                performance[
+                    "quality_score"
+                ],
+
+            "quality_source":
+                performance[
+                    "quality_source"
+                ],
+
+            "operational_reliability_score":
+                performance[
+                    "reliability_score"
+                ],
+
+            "reliability_source":
+                performance[
+                    "reliability_source"
+                ],
 
 
             # ------------------------------------------------
@@ -293,7 +397,7 @@ def get_supplier_intelligence(
 
 
             # ------------------------------------------------
-            # Component-specific commercial information
+            # Component-specific supplier terms
             # ------------------------------------------------
 
             "supplier_part_code":
@@ -356,19 +460,29 @@ def get_supplier_intelligence(
 
     # ========================================================
     # SORTING
+    # ========================================================
     #
-    # Approved first.
-    # Suppliers with actual ATP data next.
-    # Higher ATP first when ATP exists.
+    # This is NOT procurement ranking.
+    #
+    # It only makes Supplier Intelligence easier to inspect.
+    #
+    # Priority:
+    #
+    # availability data
+    #      ↓
+    # ATP
+    #      ↓
+    # operational reliability
+    #      ↓
+    # price
+    #
+    # Final procurement ranking will still happen inside
+    # ProcurementService.
     # ========================================================
 
     results.sort(
 
         key=lambda item: (
-
-            not item[
-                "is_approved"
-            ],
 
             not item[
                 "availability_data_available"
@@ -379,6 +493,28 @@ def get_supplier_intelligence(
                     "available_to_promise"
                 ]
                 or 0
+            ),
+
+            -(
+                item[
+                    "operational_reliability_score"
+                ]
+                or 0
+            ),
+
+            (
+                item[
+                    "unit_price"
+                ]
+
+                if item[
+                    "unit_price"
+                ]
+                is not None
+
+                else float(
+                    "inf"
+                )
             )
 
         )

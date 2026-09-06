@@ -9,7 +9,7 @@ from backend.app.models import (
 class SupplierPerformanceService:
 
     # ========================================================
-    # QUALITY RATING -> 0-100 SCORE
+    # QUALITY RATING -> 0-100
     # ========================================================
 
     @staticmethod
@@ -18,7 +18,6 @@ class SupplierPerformanceService:
     ):
 
         if quality_rating is None:
-
             return None
 
         try:
@@ -36,7 +35,11 @@ class SupplierPerformanceService:
 
 
         # ----------------------------------------------------
-        # Normal supplier-master rating: 0 to 5
+        # Example:
+        #
+        # 4.5 / 5
+        # becomes
+        # 90 / 100
         # ----------------------------------------------------
 
         if 0 <= rating <= 5:
@@ -47,8 +50,10 @@ class SupplierPerformanceService:
 
 
         # ----------------------------------------------------
-        # Defensive support for a rating already expressed
-        # on a 0-100 scale.
+        # Defensive support if CSV already contains percentage
+        #
+        # Example:
+        # 90 -> 90
         # ----------------------------------------------------
 
         if 5 < rating <= 100:
@@ -57,6 +62,82 @@ class SupplierPerformanceService:
 
 
         return None
+
+
+    # ========================================================
+    # NORMALIZE RELIABILITY SCORE
+    # ========================================================
+
+    @staticmethod
+    def normalize_reliability_score(
+        reliability_score
+    ):
+
+        if reliability_score is None:
+            return None
+
+        try:
+
+            score = float(
+                reliability_score
+            )
+
+        except (
+            TypeError,
+            ValueError
+        ):
+
+            return None
+
+
+        # ----------------------------------------------------
+        # Support decimal reliability
+        #
+        # Example:
+        # 0.92 -> 92
+        # ----------------------------------------------------
+
+        if 0 <= score <= 1:
+
+            return score * 100
+
+
+        # ----------------------------------------------------
+        # Already percentage
+        #
+        # Example:
+        # 92 -> 92
+        # ----------------------------------------------------
+
+        if 1 < score <= 100:
+
+            return score
+
+
+        return None
+
+
+    # ========================================================
+    # SAFE NUMERIC VALUE
+    # ========================================================
+
+    @staticmethod
+    def safe_number(
+        value,
+        default=0.0
+    ):
+
+        if value is None:
+            return default
+
+        try:
+            return float(value)
+
+        except (
+            TypeError,
+            ValueError
+        ):
+            return default
 
 
     # ========================================================
@@ -96,27 +177,33 @@ class SupplierPerformanceService:
             )
 
 
-        # ----------------------------------------------------
-        # Supplier master quality
-        # ----------------------------------------------------
+        # ====================================================
+        # MASTER / BASELINE DATA
+        # ====================================================
 
         baseline_quality_score = (
+
             SupplierPerformanceService
             .quality_rating_to_score(
                 supplier.quality_rating
             )
+
         )
 
 
         baseline_reliability_score = (
-            supplier
-            .baseline_reliability_score
+
+            SupplierPerformanceService
+            .normalize_reliability_score(
+                supplier.baseline_reliability_score
+            )
+
         )
 
 
-        # ----------------------------------------------------
-        # Historical performance records
-        # ----------------------------------------------------
+        # ====================================================
+        # HISTORICAL PERFORMANCE DATA
+        # ====================================================
 
         records = (
 
@@ -135,24 +222,32 @@ class SupplierPerformanceService:
 
 
         # ====================================================
-        # NO HISTORICAL PERFORMANCE
+        # NO HISTORICAL DATA
         # ====================================================
 
         if not records:
 
             quality_score = (
+
                 baseline_quality_score
-                if baseline_quality_score is not None
+
+                if baseline_quality_score
+                is not None
+
                 else 0.0
+
             )
 
 
             reliability_score = (
-                float(
-                    baseline_reliability_score
-                )
-                if baseline_reliability_score is not None
+
+                baseline_reliability_score
+
+                if baseline_reliability_score
+                is not None
+
                 else 0.0
+
             )
 
 
@@ -209,8 +304,10 @@ class SupplierPerformanceService:
                 "quality_source":
                     (
                         "MASTER_RATING"
+
                         if baseline_quality_score
                         is not None
+
                         else "UNAVAILABLE"
                     ),
 
@@ -218,12 +315,32 @@ class SupplierPerformanceService:
                     supplier.quality_rating,
 
                 "baseline_reliability_score":
-                    baseline_reliability_score,
+                    (
+                        round(
+                            baseline_reliability_score,
+                            2
+                        )
+
+                        if baseline_reliability_score
+                        is not None
+
+                        else None
+                    ),
 
                 "reliability_score":
                     round(
                         reliability_score,
                         2
+                    ),
+
+                "reliability_source":
+                    (
+                        "MASTER_BASELINE"
+
+                        if baseline_reliability_score
+                        is not None
+
+                        else "UNAVAILABLE"
                     )
 
             }
@@ -235,7 +352,10 @@ class SupplierPerformanceService:
 
         total_orders = sum(
 
-            record.total_orders
+            SupplierPerformanceService
+            .safe_number(
+                record.total_orders
+            )
 
             for record
             in records
@@ -245,7 +365,10 @@ class SupplierPerformanceService:
 
         on_time_orders = sum(
 
-            record.on_time_orders
+            SupplierPerformanceService
+            .safe_number(
+                record.on_time_orders
+            )
 
             for record
             in records
@@ -255,7 +378,10 @@ class SupplierPerformanceService:
 
         late_orders = sum(
 
-            record.late_orders
+            SupplierPerformanceService
+            .safe_number(
+                record.late_orders
+            )
 
             for record
             in records
@@ -265,7 +391,10 @@ class SupplierPerformanceService:
 
         ordered_quantity = sum(
 
-            record.ordered_quantity
+            SupplierPerformanceService
+            .safe_number(
+                record.ordered_quantity
+            )
 
             for record
             in records
@@ -275,7 +404,10 @@ class SupplierPerformanceService:
 
         received_quantity = sum(
 
-            record.received_quantity
+            SupplierPerformanceService
+            .safe_number(
+                record.received_quantity
+            )
 
             for record
             in records
@@ -285,10 +417,25 @@ class SupplierPerformanceService:
 
         defective_quantity = sum(
 
-            record.defective_quantity
+            SupplierPerformanceService
+            .safe_number(
+                record.defective_quantity
+            )
 
             for record
             in records
+
+        )
+
+
+        # ====================================================
+        # HISTORICAL DATA ACTUALLY AVAILABLE?
+        # ====================================================
+
+        performance_data_available = (
+
+            total_orders > 0
+            or ordered_quantity > 0
 
         )
 
@@ -300,9 +447,17 @@ class SupplierPerformanceService:
         weighted_delay = sum(
 
             (
-                record.average_delay_days
+                SupplierPerformanceService
+                .safe_number(
+                    record.average_delay_days
+                )
+
                 *
-                record.late_orders
+
+                SupplierPerformanceService
+                .safe_number(
+                    record.late_orders
+                )
             )
 
             for record
@@ -314,9 +469,11 @@ class SupplierPerformanceService:
         if late_orders > 0:
 
             average_delay_days = (
+
                 weighted_delay
                 /
                 late_orders
+
             )
 
         else:
@@ -343,6 +500,16 @@ class SupplierPerformanceService:
             on_time_delivery_rate = 0.0
 
 
+        # Keep percentage valid
+        on_time_delivery_rate = max(
+            0.0,
+            min(
+                100.0,
+                on_time_delivery_rate
+            )
+        )
+
+
         # ====================================================
         # FILL RATE
         # ====================================================
@@ -360,6 +527,15 @@ class SupplierPerformanceService:
         else:
 
             fill_rate = 0.0
+
+
+        fill_rate = max(
+            0.0,
+            min(
+                100.0,
+                fill_rate
+            )
+        )
 
 
         # ====================================================
@@ -381,19 +557,28 @@ class SupplierPerformanceService:
             defect_rate = 0.0
 
 
+        defect_rate = max(
+            0.0,
+            min(
+                100.0,
+                defect_rate
+            )
+        )
+
+
         # ====================================================
         # QUALITY SCORE
         # ====================================================
         #
-        # The new historical PO dataset does not contain
-        # defective quantity.
+        # IMPORTANT:
         #
-        # Therefore:
+        # purchase_orders.csv does NOT contain a defect column.
         #
-        # 1. If actual defect information exists -> use it.
-        # 2. Otherwise use supplier-master quality rating.
-        # 3. If neither exists -> fall back to calculated
-        #    defect quality.
+        # Therefore zero defective quantity imported from that
+        # dataset must NOT automatically mean perfect quality.
+        #
+        # We use supplier_master quality_rating unless actual
+        # defect quantities exist.
         # ====================================================
 
         actual_defect_information_available = (
@@ -407,7 +592,7 @@ class SupplierPerformanceService:
 
             quality_score = max(
 
-                0,
+                0.0,
 
                 100
                 -
@@ -433,56 +618,81 @@ class SupplierPerformanceService:
 
         else:
 
-            quality_score = max(
-
-                0,
-
-                100
-                -
-                defect_rate
-
-            )
+            quality_score = 0.0
 
             quality_source = (
-                "PERFORMANCE_FALLBACK"
+                "UNAVAILABLE"
             )
 
 
         # ====================================================
-        # OPERATIONAL RELIABILITY SCORE
+        # OPERATIONAL RELIABILITY
         # ====================================================
         #
-        # Existing logic preserved:
-        #
-        # 50% On-time delivery
-        # 30% Fill rate
+        # 50% On-Time Delivery
+        # 30% Fill Rate
         # 20% Quality
         # ====================================================
 
-        reliability_score = (
+        if performance_data_available:
 
-            (
-                on_time_delivery_rate
-                *
-                0.50
+            reliability_score = (
+
+                (
+                    on_time_delivery_rate
+                    *
+                    0.50
+                )
+
+                +
+
+                (
+                    fill_rate
+                    *
+                    0.30
+                )
+
+                +
+
+                (
+                    quality_score
+                    *
+                    0.20
+                )
+
             )
 
-            +
-
-            (
-                fill_rate
-                *
-                0.30
+            reliability_source = (
+                "HISTORICAL_PERFORMANCE"
             )
 
-            +
 
-            (
-                quality_score
-                *
-                0.20
+        elif baseline_reliability_score is not None:
+
+            reliability_score = (
+                baseline_reliability_score
             )
 
+            reliability_source = (
+                "MASTER_BASELINE"
+            )
+
+
+        else:
+
+            reliability_score = 0.0
+
+            reliability_source = (
+                "UNAVAILABLE"
+            )
+
+
+        reliability_score = max(
+            0.0,
+            min(
+                100.0,
+                reliability_score
+            )
         )
 
 
@@ -502,25 +712,34 @@ class SupplierPerformanceService:
                 supplier.supplier_name,
 
             "performance_data_available":
-                True,
+                performance_data_available,
 
             "total_orders":
-                total_orders,
+                int(total_orders),
 
             "on_time_orders":
-                on_time_orders,
+                int(on_time_orders),
 
             "late_orders":
-                late_orders,
+                int(late_orders),
 
             "ordered_quantity":
-                ordered_quantity,
+                round(
+                    ordered_quantity,
+                    2
+                ),
 
             "received_quantity":
-                received_quantity,
+                round(
+                    received_quantity,
+                    2
+                ),
 
             "defective_quantity":
-                defective_quantity,
+                round(
+                    defective_quantity,
+                    2
+                ),
 
             "on_time_delivery_rate":
                 round(
@@ -559,13 +778,26 @@ class SupplierPerformanceService:
                 supplier.quality_rating,
 
             "baseline_reliability_score":
-                baseline_reliability_score,
+                (
+                    round(
+                        baseline_reliability_score,
+                        2
+                    )
+
+                    if baseline_reliability_score
+                    is not None
+
+                    else None
+                ),
 
             "reliability_score":
                 round(
                     reliability_score,
                     2
-                )
+                ),
+
+            "reliability_source":
+                reliability_source
 
         }
 
@@ -590,6 +822,10 @@ class SupplierPerformanceService:
                 == True
             )
 
+            .order_by(
+                Supplier.id
+            )
+
             .all()
 
         )
@@ -612,7 +848,6 @@ class SupplierPerformanceService:
                 )
 
             )
-
 
             results.append(
                 result

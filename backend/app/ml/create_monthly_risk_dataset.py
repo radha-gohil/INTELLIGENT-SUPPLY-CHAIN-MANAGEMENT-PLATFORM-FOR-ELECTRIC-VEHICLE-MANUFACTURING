@@ -9,6 +9,10 @@ from backend.app.models import (
     SupplierPerformance
 )
 
+from backend.app.service.supplier_performance_service import (
+    SupplierPerformanceService
+)
+
 
 # ============================================================
 # CONFIGURATION
@@ -33,64 +37,172 @@ os.makedirs(
 
 
 # ============================================================
-# CALCULATE RISK
+# HELPERS
 # ============================================================
 
-def calculate_risk(
-    on_time_delivery_rate,
-    fill_rate,
-    defect_rate,
-    average_delay_days
+def safe_float(
+    value,
+    default=0.0
 ):
 
-    # --------------------------------------------------------
-    # Quality score
-    # --------------------------------------------------------
+    if value is None:
 
-    quality_score = max(
-        0,
-        100 - (defect_rate * 10)
+        return default
+
+    try:
+
+        return float(
+            value
+        )
+
+    except (
+        TypeError,
+        ValueError
+    ):
+
+        return default
+
+
+def clamp(
+    value,
+    minimum=0.0,
+    maximum=100.0
+):
+
+    return max(
+
+        minimum,
+
+        min(
+            maximum,
+            float(
+                value
+            )
+        )
+
     )
 
+
+# ============================================================
+# CALCULATE RISK LABEL
+# ============================================================
+#
+# Historical purchase-order data does NOT contain reliable
+# product-defect measurements.
+#
+# Therefore:
+#
+# defective_quantity
+# defect_rate
+#
+# are intentionally NOT used.
+#
+#
+# Risk label is created using:
+#
+# 40% On-time delivery
+# 25% Fill rate
+# 20% Master quality
+# 15% Delay performance
+#
+# ============================================================
+
+def calculate_risk_label(
+
+    on_time_delivery_rate,
+
+    fill_rate,
+
+    quality_score,
+
+    average_delay_days
+
+):
 
     # --------------------------------------------------------
     # Delay score
     #
-    # 0 days = 100
-    # Increasing delay reduces score
+    # 0 days delay     -> 100
+    # 1 day delay      -> 90
+    # 5 days delay     -> 50
+    # 10+ days delay   -> 0
     # --------------------------------------------------------
 
-    delay_score = max(
-        0,
-        100 - (average_delay_days * 10)
+    delay_score = clamp(
+
+        100.0
+
+        -
+
+        (
+            max(
+                0.0,
+                average_delay_days
+            )
+
+            *
+
+            10.0
+        )
+
     )
 
 
     # --------------------------------------------------------
-    # Overall operational score
+    # Operational score
     # --------------------------------------------------------
 
     operational_score = (
 
-        (on_time_delivery_rate * 0.40)
+        (
+            clamp(
+                on_time_delivery_rate
+            )
+
+            *
+
+            0.40
+        )
 
         +
 
-        (fill_rate * 0.25)
+        (
+            clamp(
+                fill_rate
+            )
+
+            *
+
+            0.25
+        )
 
         +
 
-        (quality_score * 0.20)
+        (
+            clamp(
+                quality_score
+            )
+
+            *
+
+            0.20
+        )
 
         +
 
-        (delay_score * 0.15)
+        (
+            delay_score
+
+            *
+
+            0.15
+        )
 
     )
 
 
     # --------------------------------------------------------
-    # Risk level
+    # Risk category
     # --------------------------------------------------------
 
     if operational_score >= 85:
@@ -107,8 +219,14 @@ def calculate_risk(
 
 
     return (
-        round(operational_score, 2),
+
+        round(
+            operational_score,
+            2
+        ),
+
         risk_level
+
     )
 
 
@@ -122,21 +240,41 @@ def create_monthly_risk_dataset():
 
     try:
 
-        print("=" * 70)
-        print("CREATING MONTHLY SUPPLIER RISK TRAINING DATASET")
-        print("=" * 70)
+        print(
+            "=" * 70
+        )
+
+        print(
+            "CREATING SUPPLIER RISK TRAINING DATASET"
+        )
+
+        print(
+            "=" * 70
+        )
 
 
-        # ----------------------------------------------------
-        # Get suppliers
-        # ----------------------------------------------------
+        # ====================================================
+        # ACTIVE SUPPLIERS
+        # ====================================================
 
         suppliers = (
-            db.query(Supplier)
-            .filter(
-                Supplier.is_active == True
+
+            db.query(
+                Supplier
             )
+
+            .filter(
+                Supplier.is_active
+                ==
+                True
+            )
+
+            .order_by(
+                Supplier.id
+            )
+
             .all()
+
         )
 
 
@@ -150,23 +288,32 @@ def create_monthly_risk_dataset():
         dataset = []
 
 
-        # ----------------------------------------------------
-        # Process supplier performance records
-        # ----------------------------------------------------
+        # ====================================================
+        # PROCESS EACH SUPPLIER
+        # ====================================================
 
         for supplier in suppliers:
 
-            records = (
+            performance_records = (
 
-                db.query(SupplierPerformance)
+                db.query(
+                    SupplierPerformance
+                )
 
                 .filter(
+
                     SupplierPerformance.supplier_id
-                    == supplier.id
+                    ==
+                    supplier.id
+
                 )
 
                 .order_by(
-                    SupplierPerformance.performance_date
+
+                    SupplierPerformance.performance_date,
+
+                    SupplierPerformance.component_id
+
                 )
 
                 .all()
@@ -174,58 +321,130 @@ def create_monthly_risk_dataset():
             )
 
 
-            if not records:
+            if not performance_records:
 
                 print(
+
                     f"Skipping "
                     f"{supplier.supplier_code} "
                     f"- no performance records."
+
                 )
 
                 continue
 
 
-            for record in records:
+            # =================================================
+            # MASTER QUALITY
+            #
+            # Convert:
+            #
+            # 4.5 / 5 -> 90 / 100
+            # =================================================
+
+            quality_score = (
+
+                SupplierPerformanceService
+                .quality_rating_to_score(
+
+                    supplier.quality_rating
+
+                )
+
+            )
+
+
+            if quality_score is None:
+
+                # Neutral fallback
+                quality_score = 50.0
+
+
+            # =================================================
+            # BASELINE RELIABILITY
+            #
+            # Supports:
+            #
+            # 0.92 -> 92
+            # 92   -> 92
+            # =================================================
+
+            baseline_reliability_score = (
+
+                SupplierPerformanceService
+                .normalize_reliability_score(
+
+                    supplier
+                    .baseline_reliability_score
+
+                )
+
+            )
+
+
+            if baseline_reliability_score is None:
+
+                # Neutral fallback
+                baseline_reliability_score = 50.0
+
+
+            # =================================================
+            # ONE DATASET ROW PER PERFORMANCE RECORD
+            # =================================================
+
+            for record in performance_records:
 
                 # ------------------------------------------------
-                # Basic values
+                # Historical values
                 # ------------------------------------------------
 
-                total_orders = (
+                total_orders = safe_float(
                     record.total_orders
                 )
 
-                on_time_orders = (
+
+                on_time_orders = safe_float(
                     record.on_time_orders
                 )
 
-                late_orders = (
+
+                late_orders = safe_float(
                     record.late_orders
                 )
 
-                ordered_quantity = (
+
+                ordered_quantity = safe_float(
                     record.ordered_quantity
                 )
 
-                received_quantity = (
+
+                received_quantity = safe_float(
                     record.received_quantity
                 )
 
-                defective_quantity = (
-                    record.defective_quantity
+
+                average_delay_days = max(
+
+                    0.0,
+
+                    safe_float(
+                        record.average_delay_days
+                    )
+
                 )
 
 
-                # ------------------------------------------------
-                # On-time delivery rate
-                # ------------------------------------------------
+                # =================================================
+                # ON-TIME DELIVERY RATE
+                # =================================================
 
                 if total_orders > 0:
 
                     on_time_delivery_rate = (
 
                         on_time_orders
-                        / total_orders
+                        /
+                        total_orders
 
                     ) * 100
 
@@ -234,16 +453,36 @@ def create_monthly_risk_dataset():
                     on_time_delivery_rate = 0.0
 
 
-                # ------------------------------------------------
-                # Fill rate
-                # ------------------------------------------------
+                # =================================================
+                # LATE ORDER RATE
+                # =================================================
+
+                if total_orders > 0:
+
+                    late_order_rate = (
+
+                        late_orders
+                        /
+                        total_orders
+
+                    ) * 100
+
+                else:
+
+                    late_order_rate = 0.0
+
+
+                # =================================================
+                # FILL RATE
+                # =================================================
 
                 if ordered_quantity > 0:
 
                     fill_rate = (
 
                         received_quantity
-                        / ordered_quantity
+                        /
+                        ordered_quantity
 
                     ) * 100
 
@@ -253,65 +492,55 @@ def create_monthly_risk_dataset():
 
 
                 # ------------------------------------------------
-                # Defect rate
+                # Keep percentages valid
                 # ------------------------------------------------
 
-                if received_quantity > 0:
-
-                    defect_rate = (
-
-                        defective_quantity
-                        / received_quantity
-
-                    ) * 100
-
-                else:
-
-                    defect_rate = 0.0
+                on_time_delivery_rate = clamp(
+                    on_time_delivery_rate
+                )
 
 
-                # ------------------------------------------------
-                # Delay
-                # ------------------------------------------------
+                late_order_rate = clamp(
+                    late_order_rate
+                )
 
-                average_delay_days = (
 
-                    record.average_delay_days
+                fill_rate = clamp(
+                    fill_rate
+                )
 
-                    if record.average_delay_days
-                    is not None
 
-                    else 0.0
+                # =================================================
+                # CREATE TARGET
+                # =================================================
+
+                (
+                    operational_score,
+
+                    risk_level
+
+                ) = calculate_risk_label(
+
+                    on_time_delivery_rate,
+
+                    fill_rate,
+
+                    quality_score,
+
+                    average_delay_days
 
                 )
 
 
-                # ------------------------------------------------
-                # Calculate operational score
-                # ------------------------------------------------
-
-                operational_score, risk_level = (
-
-                    calculate_risk(
-
-                        on_time_delivery_rate,
-
-                        fill_rate,
-
-                        defect_rate,
-
-                        average_delay_days
-
-                    )
-
-                )
-
-
-                # ------------------------------------------------
-                # Create dataset row
-                # ------------------------------------------------
+                # =================================================
+                # TRAINING ROW
+                # =================================================
 
                 dataset.append({
+
+                    # --------------------------------------------
+                    # Reference information
+                    # --------------------------------------------
 
                     "supplier_id":
                         supplier.id,
@@ -325,23 +554,22 @@ def create_monthly_risk_dataset():
                     "performance_date":
                         record.performance_date,
 
+
+                    # --------------------------------------------
+                    # MODEL FEATURES
+                    # --------------------------------------------
+
                     "total_orders":
-                        total_orders,
+                        round(
+                            total_orders,
+                            2
+                        ),
 
-                    "on_time_orders":
-                        on_time_orders,
-
-                    "late_orders":
-                        late_orders,
-
-                    "ordered_quantity":
-                        ordered_quantity,
-
-                    "received_quantity":
-                        received_quantity,
-
-                    "defective_quantity":
-                        defective_quantity,
+                    "late_order_rate":
+                        round(
+                            late_order_rate,
+                            2
+                        ),
 
                     "on_time_delivery_rate":
                         round(
@@ -355,17 +583,28 @@ def create_monthly_risk_dataset():
                             2
                         ),
 
-                    "defect_rate":
-                        round(
-                            defect_rate,
-                            2
-                        ),
-
                     "average_delay_days":
                         round(
                             average_delay_days,
                             2
                         ),
+
+                    "quality_score":
+                        round(
+                            quality_score,
+                            2
+                        ),
+
+                    "baseline_reliability_score":
+                        round(
+                            baseline_reliability_score,
+                            2
+                        ),
+
+
+                    # --------------------------------------------
+                    # TARGET SUPPORT
+                    # --------------------------------------------
 
                     "operational_score":
                         operational_score,
@@ -376,9 +615,9 @@ def create_monthly_risk_dataset():
                 })
 
 
-        # ----------------------------------------------------
-        # Convert to DataFrame
-        # ----------------------------------------------------
+        # ====================================================
+        # CREATE DATAFRAME
+        # ====================================================
 
         df = pd.DataFrame(
             dataset
@@ -392,82 +631,184 @@ def create_monthly_risk_dataset():
             )
 
 
+        # ====================================================
+        # VALIDATE NUMERIC FEATURES
+        # ====================================================
+
+        feature_columns = [
+
+            "total_orders",
+
+            "late_order_rate",
+
+            "on_time_delivery_rate",
+
+            "fill_rate",
+
+            "average_delay_days",
+
+            "quality_score",
+
+            "baseline_reliability_score"
+
+        ]
+
+
+        for column in feature_columns:
+
+            df[
+                column
+            ] = pd.to_numeric(
+
+                df[
+                    column
+                ],
+
+                errors="coerce"
+
+            )
+
+
         # ----------------------------------------------------
-        # Sort dataset
+        # Remove invalid rows
         # ----------------------------------------------------
+
+        df = df.dropna(
+
+            subset=(
+
+                feature_columns
+
+                +
+
+                [
+                    "risk_level"
+                ]
+
+            )
+
+        )
+
+
+        if df.empty:
+
+            raise ValueError(
+
+                "No valid training rows remain "
+                "after data validation."
+
+            )
+
+
+        # ====================================================
+        # SORT DATA
+        # ====================================================
 
         df = df.sort_values(
+
             by=[
+
                 "supplier_id",
-                "performance_date"
+
+                "performance_date",
+
+                "component_id"
+
             ]
+
         )
 
 
-        # ----------------------------------------------------
-        # Save dataset
-        # ----------------------------------------------------
+        # ====================================================
+        # SAVE DATASET
+        # ====================================================
 
         df.to_csv(
+
             OUTPUT_FILE,
+
             index=False
+
         )
 
 
-        # ----------------------------------------------------
-        # Summary
-        # ----------------------------------------------------
+        # ====================================================
+        # SUMMARY
+        # ====================================================
 
-        print("\nDataset created successfully.")
+        print(
+            "\nDataset created successfully."
+        )
+
 
         print(
             f"Location: {OUTPUT_FILE}"
         )
 
+
         print(
             f"Rows: {len(df)}"
         )
+
 
         print(
             f"Columns: {len(df.columns)}"
         )
 
 
-        print("\nRisk distribution:")
-
         print(
-            df["risk_level"]
-            .value_counts()
+            "\nRisk distribution:"
         )
 
 
-        print("\nSupplier distribution:")
-
         print(
-            df["supplier_code"]
+
+            df[
+                "risk_level"
+            ]
             .value_counts()
+
         )
 
 
-        print("\nDataset preview:")
+        print(
+            "\nFeatures used:"
+        )
+
+
+        for column in feature_columns:
+
+            print(
+                f"- {column}"
+            )
+
 
         print(
-            df.head(10)
+            "\nDataset preview:"
+        )
+
+
+        print(
+
+            df
+            .head(
+                10
+            )
             .to_string(
                 index=False
             )
+
         )
 
 
-        print("=" * 70)
+        print(
+            "=" * 70
+        )
 
 
-    except Exception as e:
+    except Exception:
 
         db.rollback()
-
-        print("\nERROR:")
-        print(e)
 
         raise
 
@@ -478,7 +819,7 @@ def create_monthly_risk_dataset():
 
 
 # ============================================================
-# MAIN
+# RUN
 # ============================================================
 
 if __name__ == "__main__":
