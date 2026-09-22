@@ -1,10 +1,9 @@
-import {
-  useState
-} from "react";
+import { useState } from "react";
 
 import {
   Alert,
   Box,
+  CircularProgress,
   CssBaseline,
   ThemeProvider,
   createTheme
@@ -15,6 +14,7 @@ import InventoryIcon from "@mui/icons-material/Inventory";
 import PeopleIcon from "@mui/icons-material/People";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 
 import Sidebar from "./components/Sidebar";
 import TopBar from "./components/TopBar";
@@ -24,37 +24,42 @@ import Procurement from "./pages/Procurement";
 import Suppliers from "./pages/Suppliers";
 import Inventory from "./pages/Inventory";
 import Orders from "./pages/Orders";
+import GraphRAG from "./pages/GraphRAG";
+import Login from "./pages/Login";
+
+import {
+  useAuth
+} from "./context/AuthContext";
 
 
 // ============================================================
 // THEME
 // ============================================================
 
-const theme =
-  createTheme({
+const theme = createTheme({
 
-    palette: {
+  palette: {
 
-      mode: "light",
+    mode: "light",
 
-      primary: {
-        main: "#1976d2"
-      },
-
-      background: {
-        default: "#f5f7fb"
-      }
-
+    primary: {
+      main: "#1976d2"
     },
 
-    typography: {
-
-      fontFamily:
-        "Inter, Roboto, Arial, sans-serif"
-
+    background: {
+      default: "#f5f7fb"
     }
 
-  });
+  },
+
+  typography: {
+
+    fontFamily:
+      "Inter, Roboto, Arial, sans-serif"
+
+  }
+
+});
 
 
 // ============================================================
@@ -62,6 +67,16 @@ const theme =
 // ============================================================
 
 function App() {
+
+  // ==========================================================
+  // AUTHENTICATION
+  // ==========================================================
+
+  const {
+    user,
+    loading
+  } = useAuth();
+
 
   // ==========================================================
   // ACTIVE PAGE
@@ -88,6 +103,84 @@ function App() {
 
 
   // ==========================================================
+  // LOADING AUTHENTICATION
+  // ==========================================================
+
+  if (loading) {
+
+    return (
+
+      <ThemeProvider
+        theme={theme}
+      >
+
+        <CssBaseline />
+
+
+        <Box
+          sx={{
+            minHeight: "100vh",
+
+            display: "flex",
+
+            flexDirection: "column",
+
+            alignItems: "center",
+
+            justifyContent: "center",
+
+            gap: 2,
+
+            backgroundColor:
+              "background.default"
+          }}
+        >
+
+          <CircularProgress />
+
+
+          <Box
+            sx={{
+              color: "text.secondary",
+              fontSize: 14
+            }}
+          >
+            Loading EV Supply Chain...
+          </Box>
+
+        </Box>
+
+      </ThemeProvider>
+
+    );
+
+  }
+
+
+  // ==========================================================
+  // NOT LOGGED IN
+  // ==========================================================
+
+  if (!user) {
+
+    return (
+
+      <ThemeProvider
+        theme={theme}
+      >
+
+        <CssBaseline />
+
+        <Login />
+
+      </ThemeProvider>
+
+    );
+
+  }
+
+
+  // ==========================================================
   // SIDEBAR MENU
   // ==========================================================
 
@@ -96,36 +189,37 @@ function App() {
     {
       id: "dashboard",
       label: "Dashboard",
-      icon:
-        <DashboardIcon />
+      icon: <DashboardIcon />
     },
 
     {
       id: "inventory",
       label: "Inventory",
-      icon:
-        <InventoryIcon />
+      icon: <InventoryIcon />
     },
 
     {
       id: "orders",
       label: "Orders",
-      icon:
-        <LocalShippingIcon />
+      icon: <LocalShippingIcon />
     },
 
     {
       id: "suppliers",
       label: "Suppliers",
-      icon:
-        <PeopleIcon />
+      icon: <PeopleIcon />
     },
 
     {
       id: "procurement",
       label: "Procurement",
-      icon:
-        <ShoppingCartIcon />
+      icon: <ShoppingCartIcon />
+    },
+
+    {
+      id: "graph-rag",
+      label: "AI Assistant",
+      icon: <AutoAwesomeIcon />
     }
 
   ];
@@ -135,264 +229,271 @@ function App() {
   // INVENTORY -> PROCUREMENT
   // ==========================================================
 
-  const handleProcureFromInventory =
-    request => {
+  const handleProcureFromInventory = request => {
 
-      setProcurementContext(
+    setProcurementContext(
+      request
+    );
+
+
+    sessionStorage.setItem(
+
+      "inventoryProcurementRequest",
+
+      JSON.stringify(
         request
-      );
+      )
+
+    );
 
 
-      sessionStorage.setItem(
+    setActivePage(
+      "procurement"
+    );
 
-        "inventoryProcurementRequest",
-
-        JSON.stringify(
-          request
-        )
-
-      );
-
-
-      setActivePage(
-        "procurement"
-      );
-
-    };
+  };
 
 
   // ==========================================================
   // CLEAR PROCUREMENT CONTEXT
   // ==========================================================
 
-  const clearProcurementContext =
-    () => {
+  const clearProcurementContext = () => {
 
-      setProcurementContext(
-        null
-      );
+    setProcurementContext(
+      null
+    );
 
 
-      sessionStorage.removeItem(
-        "inventoryProcurementRequest"
-      );
+    sessionStorage.removeItem(
+      "inventoryProcurementRequest"
+    );
 
-    };
+  };
 
 
   // ==========================================================
   // PROCUREMENT -> ORDERS
   // ==========================================================
 
-  const handleViewOrders =
-    () => {
+  const handleViewOrders = () => {
 
-      clearProcurementContext();
+    clearProcurementContext();
 
 
-      setActivePage(
-        "orders"
-      );
+    setActivePage(
+      "orders"
+    );
 
-    };
+  };
 
 
   // ==========================================================
   // RENDER PAGE
   // ==========================================================
 
-  const renderPage =
-    () => {
+  const renderPage = () => {
 
-      switch (
-        activePage
-      ) {
+    switch (
+      activePage
+    ) {
 
-        // ====================================================
-        // DASHBOARD
-        // ====================================================
+      // ====================================================
+      // DASHBOARD
+      // ====================================================
 
-        case "dashboard":
+      case "dashboard":
 
-          return (
-            <Dashboard />
-          );
-
-
-        // ====================================================
-        // INVENTORY
-        // ====================================================
-
-        case "inventory":
-
-          return (
-
-            <Inventory
-              onProcure={
-                handleProcureFromInventory
-              }
-            />
-
-          );
+        return (
+          <Dashboard />
+        );
 
 
-        // ====================================================
-        // ORDERS
-        // ====================================================
+      // ====================================================
+      // INVENTORY
+      // ====================================================
 
-        case "orders":
+      case "inventory":
 
-          return (
-            <Orders />
-          );
+        return (
 
+          <Inventory
+            onProcure={
+              handleProcureFromInventory
+            }
+          />
 
-        // ====================================================
-        // SUPPLIERS
-        // ====================================================
-
-        case "suppliers":
-
-          return (
-            <Suppliers />
-          );
+        );
 
 
-        // ====================================================
-        // PROCUREMENT
-        // ====================================================
+      // ====================================================
+      // ORDERS
+      // ====================================================
 
-        case "procurement":
+      case "orders":
 
-          return (
+        return (
+          <Orders />
+        );
 
-            <Box>
 
-              {/* =============================================
-                  INVENTORY PROCUREMENT BANNER
-              ============================================= */}
+      // ====================================================
+      // SUPPLIERS
+      // ====================================================
 
-              {procurementContext && (
+      case "suppliers":
 
-                <Box
-                  sx={{
-                    px: 3,
-                    pt: 3
-                  }}
+        return (
+          <Suppliers />
+        );
+
+
+      // ====================================================
+      // PROCUREMENT
+      // ====================================================
+
+      case "procurement":
+
+        return (
+
+          <Box>
+
+            {/* =============================================
+                INVENTORY PROCUREMENT BANNER
+            ============================================= */}
+
+            {procurementContext && (
+
+              <Box
+                sx={{
+                  px: 3,
+                  pt: 3
+                }}
+              >
+
+                <Alert
+                  severity={
+
+                    procurementContext
+                      .urgency ===
+                      "URGENT"
+
+                      ? "error"
+
+                      : procurementContext
+                          .urgency ===
+                          "HIGH"
+
+                        ? "warning"
+
+                        : "info"
+
+                  }
+
+                  onClose={
+                    clearProcurementContext
+                  }
                 >
 
-                  <Alert
-                    severity={
+                  Inventory procurement request:{" "}
 
+
+                  <strong>
+                    {
                       procurementContext
-                        .urgency ===
-                        "URGENT"
-
-                        ? "error"
-
-                        : procurementContext
-                            .urgency ===
-                            "HIGH"
-
-                          ? "warning"
-
-                          : "info"
-
+                        .vehicle_type
                     }
+                  </strong>
 
-                    onClose={
-                      clearProcurementContext
+
+                  {" → "}
+
+
+                  <strong>
+                    {
+                      procurementContext
+                        .part_name
                     }
-                  >
-
-                    Inventory procurement request:{" "}
+                  </strong>
 
 
-                    <strong>
-                      {
+                  {" | Recommended quantity: "}
+
+
+                  <strong>
+                    {
+                      Number(
                         procurementContext
-                          .vehicle_type
-                      }
-                    </strong>
+                          .required_quantity
+                        || 0
+                      )
+                        .toLocaleString()
+                    }
+                  </strong>
 
 
-                    {" → "}
+                  {" | Urgency: "}
 
 
-                    <strong>
-                      {
-                        procurementContext
-                          .part_name
-                      }
-                    </strong>
+                  <strong>
+                    {
+                      procurementContext
+                        .urgency
+                    }
+                  </strong>
+
+                </Alert>
+
+              </Box>
+
+            )}
 
 
-                    {" | Recommended quantity: "}
+            {/* =============================================
+                PROCUREMENT PAGE
+            ============================================= */}
+
+            <Procurement
+
+              initialRequest={
+                procurementContext
+              }
+
+              onViewOrders={
+                handleViewOrders
+              }
+
+            />
+
+          </Box>
+
+        );
 
 
-                    <strong>
-                      {
-                        Number(
-                          procurementContext
-                            .required_quantity
-                          || 0
-                        )
-                          .toLocaleString()
-                      }
-                    </strong>
+      // ====================================================
+      // GRAPH-RAG AI ASSISTANT
+      // ====================================================
+
+      case "graph-rag":
+
+        return (
+          <GraphRAG />
+        );
 
 
-                    {" | Urgency: "}
+      // ====================================================
+      // DEFAULT
+      // ====================================================
 
+      default:
 
-                    <strong>
-                      {
-                        procurementContext
-                          .urgency
-                      }
-                    </strong>
+        return (
+          <Dashboard />
+        );
 
-                  </Alert>
+    }
 
-                </Box>
-
-              )}
-
-
-              {/* =============================================
-                  PROCUREMENT PAGE
-              ============================================= */}
-
-              <Procurement
-
-                initialRequest={
-                  procurementContext
-                }
-
-                onViewOrders={
-                  handleViewOrders
-                }
-
-              />
-
-            </Box>
-
-          );
-
-
-        // ====================================================
-        // DEFAULT
-        // ====================================================
-
-        default:
-
-          return (
-            <Dashboard />
-          );
-
-      }
-
-    };
+  };
 
 
   // ==========================================================
@@ -402,9 +503,7 @@ function App() {
   return (
 
     <ThemeProvider
-      theme={
-        theme
-      }
+      theme={theme}
     >
 
       <CssBaseline />
@@ -445,7 +544,10 @@ function App() {
         <Box
           sx={{
             flexGrow: 1,
-            minWidth: 0
+            minWidth: 0,
+
+            backgroundColor:
+              "background.default"
           }}
         >
 

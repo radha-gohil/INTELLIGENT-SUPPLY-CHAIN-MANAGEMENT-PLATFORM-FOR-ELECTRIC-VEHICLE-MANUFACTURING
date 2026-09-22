@@ -9,6 +9,10 @@ from sqlalchemy import (
 from backend.app.database.connection import Base
 
 
+# ============================================================
+# SUPPLIER MODEL
+# ============================================================
+
 class Supplier(Base):
 
     __tablename__ = "suppliers"
@@ -53,9 +57,8 @@ class Supplier(Base):
     # ========================================================
     # MASTER / DEFAULT COMMERCIAL INFORMATION
     #
-    # IMPORTANT:
-    # Component-specific commercial information belongs in
-    # SupplierComponent.
+    # Component-specific commercial information belongs
+    # inside SupplierComponent.
     #
     # These values come from supplier_master.csv and represent
     # general/default supplier characteristics.
@@ -80,12 +83,12 @@ class Supplier(Base):
     # MASTER QUALITY / RELIABILITY
     #
     # quality_rating:
-    #     Normalised 0 - 5 master rating.
+    #     Supplier master quality rating.
     #
     # baseline_reliability_score:
-    #     Supplier-master reliability rating, normally 0 - 100.
+    #     Supplier-master reliability rating.
     #
-    # Operational reliability is still calculated separately
+    # Operational reliability can be calculated separately
     # from historical supplier performance.
     # ========================================================
 

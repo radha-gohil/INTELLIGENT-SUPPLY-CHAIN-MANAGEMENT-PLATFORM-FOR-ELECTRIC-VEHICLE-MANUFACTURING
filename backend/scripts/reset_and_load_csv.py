@@ -1006,6 +1006,10 @@ def insert_vehicles(
 # LOAD SUPPLIERS
 # ============================================================
 
+# ============================================================
+# LOAD SUPPLIERS
+# ============================================================
+
 def insert_suppliers(
     db,
     dataframe
@@ -1015,7 +1019,6 @@ def insert_suppliers(
         "\nLoading suppliers..."
     )
 
-
     for _, row in (
         dataframe.iterrows()
     ):
@@ -1023,7 +1026,6 @@ def insert_suppliers(
         status = str(
             row["status"]
         ).strip().upper()
-
 
         record = Supplier(
 
@@ -1043,25 +1045,49 @@ def insert_suppliers(
                 row["component_category"]
             ).strip(),
 
-            standard_lead_time_days=int(
+            # =================================================
+            # MASTER SUPPLIER LEAD TIME
+            # =================================================
+
+            master_lead_time_days=int(
                 row["lead_time_days"]
             ),
 
-            default_unit_cost=float(
+            # =================================================
+            # MASTER SUPPLIER UNIT COST
+            # =================================================
+
+            master_unit_cost=float(
                 row["unit_cost"]
             ),
 
-            monthly_capacity=int(
+            # =================================================
+            # MASTER MONTHLY CAPACITY
+            # =================================================
+
+            master_monthly_capacity=int(
                 row["monthly_capacity"]
             ),
+
+            # =================================================
+            # QUALITY RATING
+            # =================================================
 
             quality_rating=float(
                 row["quality_rating"]
             ),
 
-            reliability_score=float(
+            # =================================================
+            # BASELINE RELIABILITY
+            # =================================================
+
+            baseline_reliability_score=float(
                 row["reliability_score"]
             ),
+
+            # =================================================
+            # STATUS
+            # =================================================
 
             status=status,
 
@@ -1071,20 +1097,16 @@ def insert_suppliers(
 
         )
 
-
         db.add(
             record
         )
 
-
     db.flush()
-
 
     suppliers = (
         db.query(Supplier)
         .all()
     )
-
 
     supplier_map = {
 
@@ -1096,16 +1118,13 @@ def insert_suppliers(
 
     }
 
-
     print(
         f"Loaded "
         f"{len(supplier_map)} "
         f"suppliers."
     )
 
-
     return supplier_map
-
 
 # ============================================================
 # LOAD VEHICLE BOM

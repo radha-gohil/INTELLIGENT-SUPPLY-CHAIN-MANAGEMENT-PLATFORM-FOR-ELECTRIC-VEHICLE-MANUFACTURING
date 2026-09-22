@@ -26,7 +26,6 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Tooltip,
   Typography
 } from "@mui/material";
 
@@ -34,14 +33,14 @@ import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import WarningAmberIcon from "@mui/icons-material/WarningAmber";
-import RefreshIcon from "@mui/icons-material/Refresh";
 import StoreIcon from "@mui/icons-material/Store";
 
 import {
   getProcurementDecision,
   getSupplierIntelligence,
   getInventoryByComponent,
+  getInventoryVehicles,
+  getVehicleInventoryComponents,
   createPurchaseOrder
 } from "../services/api";
 
@@ -60,7 +59,6 @@ function getValue(
     return fallback;
   }
 
-
   for (const key of possibleKeys) {
 
     if (
@@ -74,9 +72,7 @@ function getValue(
 
   }
 
-
   return fallback;
-
 }
 
 
@@ -84,36 +80,23 @@ function getValue(
 // NUMBER FORMAT
 // ============================================================
 
-function formatNumber(
-  value
-) {
+function formatNumber(value) {
 
   if (
     value === null ||
     value === undefined ||
     value === ""
   ) {
-
     return "-";
-
   }
 
+  const number = Number(value);
 
-  const number =
-    Number(value);
-
-
-  if (
-    Number.isNaN(number)
-  ) {
-
+  if (Number.isNaN(number)) {
     return "-";
-
   }
-
 
   return number.toLocaleString();
-
 }
 
 
@@ -121,15 +104,10 @@ function formatNumber(
 // MONEY FORMAT
 // ============================================================
 
-function formatMoney(
-  value
-) {
+function formatMoney(value) {
 
   const number =
-    Number(
-      value || 0
-    );
-
+    Number(value || 0);
 
   return new Intl.NumberFormat(
     "en-IN",
@@ -138,10 +116,7 @@ function formatMoney(
       currency: "INR",
       maximumFractionDigits: 2
     }
-  ).format(
-    number
-  );
-
+  ).format(number);
 }
 
 
@@ -149,37 +124,23 @@ function formatMoney(
 // SCORE FORMAT
 // ============================================================
 
-function formatScore(
-  value
-) {
+function formatScore(value) {
 
   if (
     value === null ||
     value === undefined
   ) {
-
     return "-";
-
   }
-
 
   const number =
     Number(value);
 
-
-  if (
-    Number.isNaN(number)
-  ) {
-
+  if (Number.isNaN(number)) {
     return "-";
-
   }
 
-
-  return number.toFixed(
-    4
-  );
-
+  return number.toFixed(4);
 }
 
 
@@ -187,21 +148,23 @@ function formatScore(
 // DATE FORMAT
 // ============================================================
 
-function formatDate(
-  value
-) {
+function formatDate(value) {
 
   if (!value) {
-
     return "-";
-
   }
 
+  try {
 
-  return new Date(
-    `${value}T00:00:00`
-  ).toLocaleDateString();
+    return new Date(
+      `${value}T00:00:00`
+    ).toLocaleDateString();
 
+  } catch {
+
+    return value;
+
+  }
 }
 
 
@@ -218,26 +181,17 @@ function readStoredRequest() {
         "inventoryProcurementRequest"
       );
 
-
     if (!raw) {
-
       return null;
-
     }
 
+    return JSON.parse(raw);
 
-    return JSON.parse(
-      raw
-    );
-
-  }
-
-  catch {
+  } catch {
 
     return null;
 
   }
-
 }
 
 
@@ -245,57 +199,41 @@ function readStoredRequest() {
 // SUPPLIER ID HELPER
 // ============================================================
 
-function extractSupplierId(
-  value
-) {
+function extractSupplierId(value) {
 
   if (
     value === null ||
     value === undefined
   ) {
-
     return null;
-
   }
 
-
-  if (
-    typeof value === "number"
-  ) {
-
+  if (typeof value === "number") {
     return value;
-
   }
 
-
-  if (
-    typeof value === "string"
-  ) {
+  if (typeof value === "string") {
 
     const number =
       Number(value);
 
-
     return Number.isNaN(number)
       ? null
       : number;
-
   }
 
-
-  return Number(
-
-    getValue(
-      value,
-      [
-        "supplier_id",
-        "id"
-      ],
-      null
-    )
-
-  ) || null;
-
+  return (
+    Number(
+      getValue(
+        value,
+        [
+          "supplier_id",
+          "id"
+        ],
+        null
+      )
+    ) || null
+  );
 }
 
 
@@ -313,36 +251,22 @@ function RiskChip({
       "UNAVAILABLE"
     ).toUpperCase();
 
+  let color = "default";
 
-  let color =
-    "default";
-
-
-  if (
-    value === "LOW"
-  ) {
-
+  if (value === "LOW") {
     color = "success";
-
   }
 
-  else if (
-    value === "MEDIUM"
-  ) {
-
+  else if (value === "MEDIUM") {
     color = "warning";
-
   }
 
   else if (
     value === "HIGH" ||
     value === "CRITICAL"
   ) {
-
     color = "error";
-
   }
-
 
   return (
     <Chip
@@ -354,7 +278,6 @@ function RiskChip({
       }}
     />
   );
-
 }
 
 
@@ -372,41 +295,19 @@ function UrgencyChip({
       "NORMAL"
     ).toUpperCase();
 
+  let color = "success";
 
-  let color =
-    "default";
-
-
-  if (
-    value === "URGENT"
-  ) {
-
+  if (value === "URGENT") {
     color = "error";
-
   }
 
-  else if (
-    value === "HIGH"
-  ) {
-
+  else if (value === "HIGH") {
     color = "warning";
-
   }
 
-  else if (
-    value === "MEDIUM"
-  ) {
-
+  else if (value === "MEDIUM") {
     color = "info";
-
   }
-
-  else {
-
-    color = "success";
-
-  }
-
 
   return (
     <Chip
@@ -418,7 +319,62 @@ function UrgencyChip({
       }}
     />
   );
+}
 
+
+// ============================================================
+// NORMALIZE COMPONENT
+// ============================================================
+
+function normalizeComponent(item) {
+
+  const componentId =
+    Number(
+      getValue(
+        item,
+        [
+          "component_id",
+          "id"
+        ],
+        0
+      )
+    );
+
+  if (!componentId) {
+    return null;
+  }
+
+  return {
+
+    component_id:
+      componentId,
+
+    component_name:
+      getValue(
+        item,
+        [
+          "component_name",
+          "part_name",
+          "name",
+          "description"
+        ],
+        `Component ${componentId}`
+      ),
+
+    part_number:
+      getValue(
+        item,
+        [
+          "part_number",
+          "part_id",
+          "component_code",
+          "part_code",
+          "code"
+        ],
+        ""
+      )
+
+  };
 }
 
 
@@ -432,14 +388,10 @@ function normalizeSupplier(
 ) {
 
   const supplierId =
-    extractSupplierId(
-      option
-    );
-
+    extractSupplierId(option);
 
   const commercial =
     intelligence || {};
-
 
   return {
 
@@ -666,26 +618,15 @@ function normalizeSupplier(
         null
       ),
 
-    risk_probabilities:
-      getValue(
-        option,
-        [
-          "ai_risk_probabilities",
-          "risk_probabilities"
-        ],
-        null
-      ),
-
     raw:
       option
 
   };
-
 }
 
 
 // ============================================================
-// PROCUREMENT
+// PROCUREMENT COMPONENT
 // ============================================================
 
 function Procurement({
@@ -704,14 +645,23 @@ function Procurement({
 
 
   // ==========================================================
-  // INPUT
+  // COMPONENTS
   // ==========================================================
+
+  const [
+    components,
+    setComponents
+  ] = useState([]);
+
+  const [
+    loadingComponents,
+    setLoadingComponents
+  ] = useState(false);
 
   const [
     componentId,
     setComponentId
   ] = useState("");
-
 
   const [
     requiredQuantity,
@@ -728,18 +678,15 @@ function Procurement({
     setProcurementDecision
   ] = useState(null);
 
-
   const [
     suppliers,
     setSuppliers
   ] = useState([]);
 
-
   const [
     selectedSupplierId,
     setSelectedSupplierId
   ] = useState(null);
-
 
   const [
     recommendedSupplierId,
@@ -756,7 +703,6 @@ function Procurement({
     setWarehouses
   ] = useState([]);
 
-
   const [
     selectedWarehouse,
     setSelectedWarehouse
@@ -771,7 +717,6 @@ function Procurement({
     orderQuantity,
     setOrderQuantity
   ] = useState("");
-
 
   const [
     createdOrder,
@@ -788,23 +733,43 @@ function Procurement({
     setLoading
   ] = useState(false);
 
-
   const [
     placingOrder,
     setPlacingOrder
   ] = useState(false);
-
 
   const [
     error,
     setError
   ] = useState("");
 
-
   const [
     warning,
     setWarning
   ] = useState("");
+
+
+  // ==========================================================
+  // SELECTED COMPONENT
+  // ==========================================================
+
+  const selectedComponent =
+    useMemo(
+      () =>
+
+        components.find(
+          component =>
+            Number(
+              component.component_id
+            ) ===
+            Number(componentId)
+        ) || null,
+
+      [
+        components,
+        componentId
+      ]
+    );
 
 
   // ==========================================================
@@ -833,40 +798,29 @@ function Procurement({
 
 
   // ==========================================================
-  // ORDER VALUE
+  // ESTIMATED ORDER VALUE
   // ==========================================================
 
   const estimatedOrderValue =
     useMemo(
       () => {
 
-        if (
-          !selectedSupplier
-        ) {
-
+        if (!selectedSupplier) {
           return 0;
-
         }
 
-
         return (
-
           Number(
-            orderQuantity ||
-            0
+            orderQuantity || 0
           )
-
           *
-
           Number(
             selectedSupplier.unit_price ||
             0
           )
-
         );
 
       },
-
       [
         selectedSupplier,
         orderQuantity
@@ -875,16 +829,14 @@ function Procurement({
 
 
   // ==========================================================
-  // CAPACITY CHECKS
+  // QUANTITY VALIDATION
   // ==========================================================
 
   const quantityValidation =
     useMemo(
       () => {
 
-        if (
-          !selectedSupplier
-        ) {
+        if (!selectedSupplier) {
 
           return {
             valid: false,
@@ -894,12 +846,8 @@ function Procurement({
 
         }
 
-
         const quantity =
-          Number(
-            orderQuantity
-          );
-
+          Number(orderQuantity);
 
         if (
           !quantity ||
@@ -914,7 +862,6 @@ function Procurement({
 
         }
 
-
         const moq =
           Number(
             selectedSupplier
@@ -922,10 +869,7 @@ function Procurement({
             1
           );
 
-
-        if (
-          quantity < moq
-        ) {
+        if (quantity < moq) {
 
           return {
             valid: false,
@@ -935,20 +879,15 @@ function Procurement({
 
         }
 
-
         if (
-          selectedSupplier
-            .maximum_capacity !== null &&
-          selectedSupplier
-            .maximum_capacity !== undefined
+          selectedSupplier.maximum_capacity !== null &&
+          selectedSupplier.maximum_capacity !== undefined
         ) {
 
           const capacity =
             Number(
-              selectedSupplier
-                .maximum_capacity
+              selectedSupplier.maximum_capacity
             );
-
 
           if (
             capacity > 0 &&
@@ -965,22 +904,18 @@ function Procurement({
 
         }
 
-
         if (
-          selectedSupplier
-            .available_to_promise !== null &&
-          selectedSupplier
-            .available_to_promise !== undefined
+          selectedSupplier.available_to_promise !== null &&
+          selectedSupplier.available_to_promise !== undefined
         ) {
 
           const available =
             Number(
-              selectedSupplier
-                .available_to_promise
+              selectedSupplier.available_to_promise
             );
 
-
           if (
+            available >= 0 &&
             quantity > available
           ) {
 
@@ -994,14 +929,12 @@ function Procurement({
 
         }
 
-
         return {
           valid: true,
           message: ""
         };
 
       },
-
       [
         selectedSupplier,
         orderQuantity
@@ -1010,7 +943,197 @@ function Procurement({
 
 
   // ==========================================================
-  // LOAD CONTEXT
+  // LOAD ALL VEHICLE COMPONENTS
+  // ==========================================================
+
+  useEffect(
+    () => {
+
+      let cancelled = false;
+
+      async function loadComponents() {
+
+        try {
+
+          setLoadingComponents(true);
+
+          const vehicleResponse =
+            await getInventoryVehicles();
+
+          const vehicleList =
+            Array.isArray(vehicleResponse)
+              ? vehicleResponse
+              : vehicleResponse?.vehicles ||
+                vehicleResponse?.data ||
+                [];
+
+          const responses =
+            await Promise.all(
+
+              vehicleList.map(
+                async vehicle => {
+
+                  const vehicleId =
+                    Number(
+                      vehicle.vehicle_id ||
+                      vehicle.id
+                    );
+
+                  if (!vehicleId) {
+                    return [];
+                  }
+
+                  try {
+
+                    const response =
+                      await getVehicleInventoryComponents(
+                        vehicleId
+                      );
+
+                    if (Array.isArray(response)) {
+                      return response;
+                    }
+
+                    if (
+                      Array.isArray(
+                        response?.components
+                      )
+                    ) {
+                      return response.components;
+                    }
+
+                    if (
+                      Array.isArray(
+                        response?.data
+                      )
+                    ) {
+                      return response.data;
+                    }
+
+                    return [];
+
+                  }
+
+                  catch (vehicleError) {
+
+                    console.error(
+                      `Unable to load components for vehicle ${vehicleId}:`,
+                      vehicleError
+                    );
+
+                    return [];
+
+                  }
+
+                }
+              )
+
+            );
+
+          const componentMap =
+            new Map();
+
+          responses
+            .flat()
+            .forEach(
+              item => {
+
+                const component =
+                  normalizeComponent(item);
+
+                if (!component) {
+                  return;
+                }
+
+                if (
+                  !componentMap.has(
+                    component.component_id
+                  )
+                ) {
+
+                  componentMap.set(
+                    component.component_id,
+                    component
+                  );
+
+                }
+
+              }
+            );
+
+          const list =
+            Array.from(
+              componentMap.values()
+            ).sort(
+              (a, b) => {
+
+                const nameA =
+                  String(
+                    a.component_name || ""
+                  );
+
+                const nameB =
+                  String(
+                    b.component_name || ""
+                  );
+
+                return nameA.localeCompare(
+                  nameB
+                );
+
+              }
+            );
+
+          if (!cancelled) {
+
+            setComponents(list);
+
+          }
+
+        }
+
+        catch (loadError) {
+
+          console.error(
+            "Unable to load procurement components:",
+            loadError
+          );
+
+          if (!cancelled) {
+
+            setError(
+              "Unable to load vehicle component list."
+            );
+
+          }
+
+        }
+
+        finally {
+
+          if (!cancelled) {
+
+            setLoadingComponents(false);
+
+          }
+
+        }
+
+      }
+
+      loadComponents();
+
+      return () => {
+        cancelled = true;
+      };
+
+    },
+    []
+  );
+
+
+  // ==========================================================
+  // LOAD INVENTORY PROCUREMENT CONTEXT
   // ==========================================================
 
   useEffect(
@@ -1020,30 +1143,23 @@ function Procurement({
         initialRequest ||
         readStoredRequest();
 
-
       if (!context) {
-
         return;
-
       }
-
 
       setRequestContext(
         context
       );
-
 
       const contextComponentId =
         Number(
           context.component_id
         );
 
-
       const contextQuantity =
         Number(
           context.required_quantity
         );
-
 
       if (
         contextComponentId > 0
@@ -1057,7 +1173,6 @@ function Procurement({
 
       }
 
-
       if (
         contextQuantity > 0
       ) {
@@ -1068,7 +1183,6 @@ function Procurement({
           )
         );
 
-
         setOrderQuantity(
           String(
             contextQuantity
@@ -1077,24 +1191,19 @@ function Procurement({
 
       }
 
-
       if (
         contextComponentId > 0 &&
         contextQuantity > 0
       ) {
 
         runProcurementAnalysis(
-
           contextComponentId,
-
           contextQuantity
-
         );
 
       }
 
     },
-
     [
       initialRequest
     ]
@@ -1113,10 +1222,8 @@ function Procurement({
     const numericComponent =
       Number(component);
 
-
     const numericQuantity =
       Number(quantity);
-
 
     if (
       !numericComponent ||
@@ -1124,13 +1231,12 @@ function Procurement({
     ) {
 
       setError(
-        "Valid component ID is required."
+        "Please select a component."
       );
 
       return;
 
     }
-
 
     if (
       !numericQuantity ||
@@ -1145,7 +1251,6 @@ function Procurement({
 
     }
 
-
     try {
 
       setLoading(true);
@@ -1154,24 +1259,17 @@ function Procurement({
 
       setWarning("");
 
-      setCreatedOrder(
-        null
-      );
-
+      setCreatedOrder(null);
 
       // ------------------------------------------------------
-      // EXISTING PROCUREMENT AI DECISION
+      // PROCUREMENT DECISION
       // ------------------------------------------------------
 
       const decision =
         await getProcurementDecision(
-
           numericComponent,
-
           numericQuantity
-
         );
-
 
       setProcurementDecision(
         decision
@@ -1179,12 +1277,10 @@ function Procurement({
 
 
       // ------------------------------------------------------
-      // SUPPLIER COMMERCIAL / AVAILABILITY INFORMATION
+      // SUPPLIER INTELLIGENCE
       // ------------------------------------------------------
 
-      let intelligence =
-        [];
-
+      let intelligence = [];
 
       try {
 
@@ -1192,7 +1288,6 @@ function Procurement({
           await getSupplierIntelligence(
             numericComponent
           );
-
 
         intelligence =
           Array.isArray(response)
@@ -1211,21 +1306,21 @@ function Procurement({
       }
 
 
+      // ------------------------------------------------------
+      // CREATE INTELLIGENCE MAP
+      // ------------------------------------------------------
+
       const intelligenceMap =
         new Map();
-
 
       intelligence.forEach(
         item => {
 
           intelligenceMap.set(
-
             Number(
               item.supplier_id
             ),
-
             item
-
           );
 
         }
@@ -1233,12 +1328,10 @@ function Procurement({
 
 
       // ------------------------------------------------------
-      // RANKED OPTIONS FROM EXISTING PROCUREMENT ENGINE
+      // RANKED SUPPLIERS
       // ------------------------------------------------------
 
-      let rankedOptions =
-        [];
-
+      let rankedOptions = [];
 
       if (
         Array.isArray(
@@ -1275,9 +1368,7 @@ function Procurement({
 
 
       // ------------------------------------------------------
-      // FALLBACK ONLY FOR DISPLAY
-      //
-      // AI decision remains the primary source.
+      // FALLBACK
       // ------------------------------------------------------
 
       if (
@@ -1288,15 +1379,18 @@ function Procurement({
         rankedOptions =
           intelligence;
 
-
         setWarning(
-          "The procurement decision API returned no ranked supplier_options. Approved supplier intelligence is being displayed, but verify the procurement recommendation endpoint."
+          "The procurement decision API returned no ranked supplier options. Supplier intelligence is being displayed."
         );
 
       }
 
 
-      let normalized =
+      // ------------------------------------------------------
+      // NORMALIZE SUPPLIERS
+      // ------------------------------------------------------
+
+      const normalized =
         rankedOptions
 
           .map(
@@ -1307,17 +1401,13 @@ function Procurement({
                   option
                 );
 
-
               return normalizeSupplier(
-
                 option,
-
                 intelligenceMap.get(
                   Number(
                     supplierId
                   )
                 )
-
               );
 
             }
@@ -1328,17 +1418,6 @@ function Procurement({
               supplier.supplier_id
           );
 
-
-      // ------------------------------------------------------
-      // AI RISK IS ALREADY PART OF THE PROCUREMENT DECISION
-      // ------------------------------------------------------
-      //
-      // The backend recommendation endpoint calculates the
-      // XGBoost supplier risk and uses that same risk in the
-      // weighted final score. Do not call /supplier-risk again
-      // here, otherwise the displayed risk can drift from the
-      // risk used for ranking.
-      // ------------------------------------------------------
 
       setSuppliers(
         normalized
@@ -1351,38 +1430,23 @@ function Procurement({
 
       const explicitRecommended =
         extractSupplierId(
-
           decision?.recommended_supplier
-
         )
-
         ||
-
         extractSupplierId(
-
           decision?.recommended_supplier_id
-
         );
 
-
       const recommendedId =
-
         explicitRecommended
-
         ||
-
-        normalized[0]
-          ?.supplier_id
-
+        normalized[0]?.supplier_id
         ||
-
         null;
-
 
       setRecommendedSupplierId(
         recommendedId
       );
-
 
       setSelectedSupplierId(
         recommendedId
@@ -1396,18 +1460,13 @@ function Procurement({
       const recommendedSupplier =
         normalized.find(
           supplier =>
-
             Number(
               supplier.supplier_id
-            )
-
-            ===
-
+            ) ===
             Number(
               recommendedId
             )
         );
-
 
       const recommendedMOQ =
         Number(
@@ -1416,21 +1475,18 @@ function Procurement({
           1
         );
 
-
       setOrderQuantity(
-
         String(
           Math.max(
             numericQuantity,
             recommendedMOQ
           )
         )
-
       );
 
 
       // ------------------------------------------------------
-      // DESTINATION WAREHOUSES
+      // LOAD WAREHOUSES
       // ------------------------------------------------------
 
       try {
@@ -1440,35 +1496,31 @@ function Procurement({
             numericComponent
           );
 
+        const warehouseList =
+          [
+            ...new Set(
 
-        const warehouseList = [
-
-          ...new Set(
-
-            (
-              Array.isArray(
-                inventoryRows
+              (
+                Array.isArray(
+                  inventoryRows
+                )
+                  ? inventoryRows
+                  : []
               )
-                ? inventoryRows
-                : []
+
+                .map(
+                  row =>
+                    row.warehouse
+                )
+
+                .filter(Boolean)
+
             )
-
-              .map(
-                row =>
-                  row.warehouse
-              )
-
-              .filter(Boolean)
-
-          )
-
-        ];
-
+          ];
 
         setWarehouses(
           warehouseList
         );
-
 
         if (
           warehouseList.length > 0
@@ -1482,9 +1534,7 @@ function Procurement({
 
         else {
 
-          setSelectedWarehouse(
-            ""
-          );
+          setSelectedWarehouse("");
 
         }
 
@@ -1497,15 +1547,9 @@ function Procurement({
           inventoryError
         );
 
+        setWarehouses([]);
 
-        setWarehouses(
-          []
-        );
-
-
-        setSelectedWarehouse(
-          ""
-        );
+        setSelectedWarehouse("");
 
       }
 
@@ -1518,28 +1562,17 @@ function Procurement({
         analysisError
       );
 
+      setProcurementDecision(null);
 
-      setProcurementDecision(
-        null
-      );
+      setSuppliers([]);
 
+      setSelectedSupplierId(null);
 
-      setSuppliers(
-        []
-      );
-
-
-      setSelectedSupplierId(
-        null
-      );
-
+      setRecommendedSupplierId(null);
 
       setError(
-
         analysisError?.message ||
-
         "Unable to generate procurement recommendation."
-
       );
 
     }
@@ -1554,237 +1587,223 @@ function Procurement({
 
 
   // ==========================================================
-  // ANALYZE BUTTON
+  // ANALYZE
   // ==========================================================
 
-  const handleAnalyze =
-    async () => {
+  async function handleAnalyze() {
 
-      await runProcurementAnalysis(
+    await runProcurementAnalysis(
+      Number(componentId),
+      Number(requiredQuantity)
+    );
 
-        Number(
-          componentId
-        ),
+  }
 
-        Number(
-          requiredQuantity
-        )
 
-      );
+  // ==========================================================
+  // COMPONENT CHANGE
+  // ==========================================================
 
-    };
+  function handleComponentChange(event) {
+
+    const value =
+      event.target.value;
+
+    setComponentId(value);
+
+    setProcurementDecision(null);
+
+    setSuppliers([]);
+
+    setSelectedSupplierId(null);
+
+    setRecommendedSupplierId(null);
+
+    setCreatedOrder(null);
+
+    setWarehouses([]);
+
+    setSelectedWarehouse("");
+
+    setError("");
+
+    setWarning("");
+
+  }
 
 
   // ==========================================================
   // SELECT SUPPLIER
   // ==========================================================
 
-  const handleSupplierSelect =
-    supplier => {
+  function handleSupplierSelect(
+    supplier
+  ) {
 
-      setSelectedSupplierId(
-        supplier.supplier_id
+    setSelectedSupplierId(
+      supplier.supplier_id
+    );
+
+    const currentQuantity =
+      Number(
+        orderQuantity ||
+        requiredQuantity ||
+        0
       );
 
+    const moq =
+      Number(
+        supplier.minimum_order_quantity ||
+        1
+      );
 
-      const currentQuantity =
-        Number(
-          orderQuantity ||
-          requiredQuantity ||
-          0
-        );
+    if (
+      currentQuantity < moq
+    ) {
 
+      setOrderQuantity(
+        String(moq)
+      );
 
-      const moq =
-        Number(
-          supplier.minimum_order_quantity ||
-          1
-        );
+    }
 
-
-      if (
-        currentQuantity < moq
-      ) {
-
-        setOrderQuantity(
-          String(
-            moq
-          )
-        );
-
-      }
-
-    };
+  }
 
 
   // ==========================================================
   // CREATE PURCHASE ORDER
   // ==========================================================
 
-  const handlePlaceOrder =
-    async () => {
+  async function handlePlaceOrder() {
 
-      if (
-        !selectedSupplier
-      ) {
+    if (!selectedSupplier) {
 
-        setError(
-          "Select a supplier before placing the order."
+      setError(
+        "Select a supplier before placing the order."
+      );
+
+      return;
+
+    }
+
+    if (!selectedWarehouse) {
+
+      setError(
+        "Select a destination warehouse."
+      );
+
+      return;
+
+    }
+
+    if (
+      !quantityValidation.valid
+    ) {
+
+      setError(
+        quantityValidation.message
+      );
+
+      return;
+
+    }
+
+    try {
+
+      setPlacingOrder(true);
+
+      setError("");
+
+      const payload = {
+
+        supplier_id:
+          Number(
+            selectedSupplier.supplier_id
+          ),
+
+        component_id:
+          Number(
+            componentId
+          ),
+
+        warehouse:
+          selectedWarehouse,
+
+        quantity_ordered:
+          Number(
+            orderQuantity
+          ),
+
+        vehicle_id:
+          requestContext?.vehicle_id
+            ? Number(
+                requestContext.vehicle_id
+              )
+            : null,
+
+        required_date:
+          requestContext?.required_date ||
+          null,
+
+        urgency:
+          requestContext?.urgency ||
+          null
+
+      };
+
+      const order =
+        await createPurchaseOrder(
+          payload
         );
 
-        return;
+      setCreatedOrder(
+        order
+      );
 
-      }
+      sessionStorage.removeItem(
+        "inventoryProcurementRequest"
+      );
 
+    }
 
-      if (
-        !selectedWarehouse
-      ) {
+    catch (orderError) {
 
-        setError(
-          "Select a destination warehouse."
-        );
+      console.error(
+        "PO creation failed:",
+        orderError
+      );
 
-        return;
+      setError(
+        orderError?.message ||
+        "Unable to create purchase order."
+      );
 
-      }
+    }
 
+    finally {
 
-      if (
-        !quantityValidation.valid
-      ) {
+      setPlacingOrder(false);
 
-        setError(
-          quantityValidation.message
-        );
+    }
 
-        return;
-
-      }
-
-
-      try {
-
-        setPlacingOrder(
-          true
-        );
-
-
-        setError("");
-
-
-        const payload = {
-
-          supplier_id:
-            Number(
-              selectedSupplier
-                .supplier_id
-            ),
-
-          component_id:
-            Number(
-              componentId
-            ),
-
-          warehouse:
-            selectedWarehouse,
-
-          quantity_ordered:
-            Number(
-              orderQuantity
-            ),
-
-          vehicle_id:
-
-            requestContext
-              ?.vehicle_id
-
-              ? Number(
-                  requestContext
-                    .vehicle_id
-                )
-
-              : null,
-
-          required_date:
-
-            requestContext
-              ?.required_date
-
-              || null,
-
-          urgency:
-
-            requestContext
-              ?.urgency
-
-              || null
-
-        };
-
-
-        const order =
-          await createPurchaseOrder(
-            payload
-          );
-
-
-        setCreatedOrder(
-          order
-        );
-
-
-        sessionStorage.removeItem(
-          "inventoryProcurementRequest"
-        );
-
-      }
-
-      catch (orderError) {
-
-        console.error(
-          "PO creation failed:",
-          orderError
-        );
-
-
-        setError(
-
-          orderError?.message ||
-
-          "Unable to create purchase order."
-
-        );
-
-      }
-
-      finally {
-
-        setPlacingOrder(
-          false
-        );
-
-      }
-
-    };
+  }
 
 
   // ==========================================================
   // VIEW ORDERS
   // ==========================================================
 
-  const handleViewOrders =
-    () => {
+  function handleViewOrders() {
 
-      if (onViewOrders) {
+    if (onViewOrders) {
 
-        onViewOrders(
-          createdOrder
-        );
+      onViewOrders(
+        createdOrder
+      );
 
-      }
+    }
 
-    };
+  }
 
 
   // ==========================================================
@@ -1841,10 +1860,8 @@ function Procurement({
           (
             [, value]
           ) =>
-
             value !== null &&
             value !== undefined
-
         )
 
       : [];
@@ -1878,7 +1895,6 @@ function Procurement({
         >
           Intelligent Procurement
         </Typography>
-
 
         <Typography
           color="text.secondary"
@@ -1935,7 +1951,7 @@ function Procurement({
 
 
       {/* =====================================================
-          INVENTORY REQUEST CONTEXT
+          INVENTORY PROCUREMENT REQUEST
       ===================================================== */}
 
       {requestContext && (
@@ -1945,9 +1961,7 @@ function Procurement({
           sx={{
             border:
               "1px solid #e5e7eb",
-
             borderRadius: 3,
-
             mb: 3
           }}
         >
@@ -1966,7 +1980,6 @@ function Procurement({
               <ShoppingCartIcon
                 color="primary"
               />
-
 
               <Typography
                 variant="h6"
@@ -2043,6 +2056,8 @@ function Procurement({
                   {
                     requestContext
                       .part_name ||
+                    selectedComponent
+                      ?.component_name ||
                     "-"
                   }
                 </Typography>
@@ -2054,6 +2069,8 @@ function Procurement({
                   {
                     requestContext
                       .part_id ||
+                    selectedComponent
+                      ?.part_number ||
                     ""
                   }
                 </Typography>
@@ -2161,7 +2178,7 @@ function Procurement({
 
 
       {/* =====================================================
-          PROCUREMENT INPUT
+          PROCUREMENT REQUIREMENT
       ===================================================== */}
 
       <Card
@@ -2169,9 +2186,7 @@ function Procurement({
         sx={{
           border:
             "1px solid #e5e7eb",
-
           borderRadius: 3,
-
           mb: 3
         }}
       >
@@ -2192,8 +2207,10 @@ function Procurement({
           <Grid
             container
             spacing={2}
-            alignItems="center"
+            alignItems="flex-start"
           >
+
+            {/* COMPONENT DROPDOWN */}
 
             <Grid
               size={{
@@ -2202,38 +2219,127 @@ function Procurement({
               }}
             >
 
-              <TextField
-                label="Component ID"
-                type="number"
+              <FormControl
                 fullWidth
-                value={
-                  componentId
+                disabled={
+                  loadingComponents
                 }
-                onChange={
-                  event => {
+              >
 
-                    setComponentId(
-                      event.target.value
-                    );
+                <InputLabel>
+                  Component
+                </InputLabel>
 
-                    setProcurementDecision(
-                      null
-                    );
-
-                    setSuppliers(
-                      []
-                    );
-
-                    setCreatedOrder(
-                      null
-                    );
-
+                <Select
+                  label="Component"
+                  value={
+                    componentId
                   }
+                  onChange={
+                    handleComponentChange
+                  }
+                >
+
+                  {components.length === 0 && (
+
+                    <MenuItem
+                      value=""
+                      disabled
+                    >
+                      {
+                        loadingComponents
+                          ? "Loading components..."
+                          : "No components available"
+                      }
+                    </MenuItem>
+
+                  )}
+
+
+                  {components.map(
+                    component => (
+
+                      <MenuItem
+                        key={
+                          component
+                            .component_id
+                        }
+                        value={
+                          String(
+                            component
+                              .component_id
+                          )
+                        }
+                      >
+
+                        <Box>
+
+                          <Typography
+                            variant="body2"
+                            fontWeight={600}
+                          >
+                            ID:{" "}
+                            {
+                              component
+                                .component_id
+                            }
+                            {" | "}
+                            {
+                              component
+                                .component_name
+                            }
+                          </Typography>
+
+                          {component
+                            .part_number && (
+
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              Part No:{" "}
+                              {
+                                component
+                                  .part_number
+                              }
+                            </Typography>
+
+                          )}
+
+                        </Box>
+
+                      </MenuItem>
+
+                    )
+                  )}
+
+                </Select>
+
+              </FormControl>
+
+
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{
+                  display: "block",
+                  mt: 0.7,
+                  ml: 1
+                }}
+              >
+
+                {
+                  loadingComponents
+                    ? "Loading vehicle components..."
+                    : `${components.length} vehicle component(s) available`
                 }
-              />
+
+              </Typography>
 
             </Grid>
 
+
+            {/* REQUIRED QUANTITY */}
 
             <Grid
               size={{
@@ -2262,10 +2368,15 @@ function Procurement({
 
                   }
                 }
+                inputProps={{
+                  min: 1
+                }}
               />
 
             </Grid>
 
+
+            {/* ANALYZE */}
 
             <Grid
               size={{
@@ -2284,7 +2395,9 @@ function Procurement({
                     : <AutoAwesomeIcon />
                 }
                 disabled={
-                  loading
+                  loading ||
+                  !componentId ||
+                  !requiredQuantity
                 }
                 onClick={
                   handleAnalyze
@@ -2310,13 +2423,40 @@ function Procurement({
 
           </Grid>
 
+
+          {selectedComponent && (
+
+            <Alert
+              severity="info"
+              sx={{
+                mt: 2
+              }}
+            >
+
+              Selected component:{" "}
+
+              <strong>
+                ID {selectedComponent.component_id}
+                {" | "}
+                {selectedComponent.component_name}
+              </strong>
+
+              {selectedComponent.part_number
+                ? ` | Part No: ${selectedComponent.part_number}`
+                : ""
+              }
+
+            </Alert>
+
+          )}
+
         </CardContent>
 
       </Card>
 
 
       {/* =====================================================
-          SUPPLIERS
+          SUPPLIER RECOMMENDATION
       ===================================================== */}
 
       {suppliers.length > 0 && (
@@ -2326,9 +2466,7 @@ function Procurement({
           sx={{
             border:
               "1px solid #e5e7eb",
-
             borderRadius: 3,
-
             mb: 3
           }}
         >
@@ -2338,14 +2476,12 @@ function Procurement({
             <Box
               sx={{
                 display: "flex",
-
                 justifyContent:
                   "space-between",
-
-                alignItems:
-                  "center",
-
-                mb: 2
+                alignItems: "center",
+                mb: 2,
+                gap: 2,
+                flexWrap: "wrap"
               }}
             >
 
@@ -2358,12 +2494,11 @@ function Procurement({
                   2. AI Supplier Recommendation
                 </Typography>
 
-
                 <Typography
                   variant="body2"
                   color="text.secondary"
                 >
-                  Suppliers are ranked by the procurement decision engine using availability, fulfillment, reliability, quality, AI risk, price and lead time.
+                  Suppliers are ranked using availability, fulfillment, reliability, quality, AI risk, price and lead time.
                 </Typography>
 
               </Box>
@@ -2474,30 +2609,20 @@ function Procurement({
                     supplier => {
 
                       const selected =
-
                         Number(
                           selectedSupplierId
-                        )
-
-                        ===
-
+                        ) ===
                         Number(
                           supplier.supplier_id
                         );
-
 
                       const recommended =
-
                         Number(
                           recommendedSupplierId
-                        )
-
-                        ===
-
+                        ) ===
                         Number(
                           supplier.supplier_id
                         );
-
 
                       return (
 
@@ -2522,7 +2647,6 @@ function Procurement({
                                   .supplier_name
                               }
                             </Typography>
-
 
                             <Typography
                               variant="caption"
@@ -2560,11 +2684,13 @@ function Procurement({
 
                               )
                               : (
+
                                 <Chip
                                   label="Alternative"
                                   size="small"
                                   variant="outlined"
                                 />
+
                               )
                             }
 
@@ -2584,9 +2710,10 @@ function Procurement({
                                 }
                               />
 
-
                               {supplier
-                                .risk_confidence !== null && (
+                                .risk_confidence !== null &&
+                               supplier
+                                .risk_confidence !== undefined && (
 
                                 <Typography
                                   variant="caption"
@@ -2641,8 +2768,10 @@ function Procurement({
                             align="right"
                           >
                             {
-                              supplier
-                                .standard_lead_time_days
+                              formatNumber(
+                                supplier
+                                  .standard_lead_time_days
+                              )
                             }{" "}
                             days
                           </TableCell>
@@ -2701,9 +2830,10 @@ function Procurement({
                                 )
                               }
                             >
-                              {selected
-                                ? "Selected"
-                                : "Select"
+                              {
+                                selected
+                                  ? "Selected"
+                                  : "Select"
                               }
                             </Button>
 
@@ -2730,7 +2860,7 @@ function Procurement({
 
 
       {/* =====================================================
-          SELECTED SUPPLIER DECISION DETAILS
+          SUPPLIER DECISION DETAILS
       ===================================================== */}
 
       {selectedSupplier && (
@@ -2740,9 +2870,7 @@ function Procurement({
           sx={{
             border:
               "1px solid #e5e7eb",
-
             borderRadius: 3,
-
             mb: 3
           }}
         >
@@ -2755,7 +2883,6 @@ function Procurement({
             >
               Supplier Decision Details
             </Typography>
-
 
             <Typography
               variant="body2"
@@ -2906,7 +3033,6 @@ function Procurement({
                   }}
                 />
 
-
                 <Typography
                   variant="subtitle2"
                   fontWeight={700}
@@ -2916,7 +3042,6 @@ function Procurement({
                 >
                   Procurement Ranking Factors
                 </Typography>
-
 
                 <Stack
                   direction="row"
@@ -2969,9 +3094,7 @@ function Procurement({
           sx={{
             border:
               "1px solid #e5e7eb",
-
             borderRadius: 3,
-
             mb: 3
           }}
         >
@@ -2990,7 +3113,6 @@ function Procurement({
               <StoreIcon
                 color="primary"
               />
-
 
               <Typography
                 variant="h6"
@@ -3022,7 +3144,6 @@ function Procurement({
                     Destination Warehouse
                   </InputLabel>
 
-
                   <Select
                     label="Destination Warehouse"
                     value={
@@ -3035,6 +3156,17 @@ function Procurement({
                         )
                     }
                   >
+
+                    {warehouses.length === 0 && (
+
+                      <MenuItem
+                        disabled
+                        value=""
+                      >
+                        No warehouse available
+                      </MenuItem>
+
+                    )}
 
                     {warehouses.map(
                       warehouse => (
@@ -3135,6 +3267,33 @@ function Procurement({
                   variant="caption"
                   color="text.secondary"
                 >
+                  Component
+                </Typography>
+
+                <Typography
+                  fontWeight={600}
+                >
+                  {
+                    selectedComponent
+                      ?.component_name ||
+                    componentId
+                  }
+                </Typography>
+
+              </Grid>
+
+
+              <Grid
+                size={{
+                  xs: 12,
+                  md: 3
+                }}
+              >
+
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                >
                   Supplier
                 </Typography>
 
@@ -3199,34 +3358,6 @@ function Procurement({
                     formatNumber(
                       selectedSupplier
                         .available_to_promise
-                    )
-                  }
-                </Typography>
-
-              </Grid>
-
-
-              <Grid
-                size={{
-                  xs: 12,
-                  md: 3
-                }}
-              >
-
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                >
-                  Required Date
-                </Typography>
-
-                <Typography
-                  fontWeight={600}
-                >
-                  {
-                    formatDate(
-                      requestContext
-                        ?.required_date
                     )
                   }
                 </Typography>
@@ -3301,7 +3432,7 @@ function Procurement({
 
 
       {/* =====================================================
-          CREATED ORDER
+          PURCHASE ORDER CREATED
       ===================================================== */}
 
       {createdOrder && (
@@ -3311,9 +3442,7 @@ function Procurement({
           sx={{
             border:
               "1px solid #c8e6c9",
-
             borderRadius: 3,
-
             mb: 3
           }}
         >
@@ -3332,7 +3461,6 @@ function Procurement({
               <CheckCircleIcon
                 color="success"
               />
-
 
               <Typography
                 variant="h6"
@@ -3380,7 +3508,8 @@ function Procurement({
                 >
                   {
                     createdOrder
-                      .po_number
+                      .po_number ||
+                    "-"
                   }
                 </Typography>
 
@@ -3407,7 +3536,10 @@ function Procurement({
                 >
                   {
                     createdOrder
-                      .supplier_name
+                      .supplier_name ||
+                    selectedSupplier
+                      ?.supplier_name ||
+                    "-"
                   }
                 </Typography>
 
@@ -3500,7 +3632,8 @@ function Procurement({
                   {
                     formatNumber(
                       createdOrder
-                        .quantity_ordered
+                        .quantity_ordered ||
+                      orderQuantity
                     )
                   }
                 </Typography>
@@ -3528,7 +3661,9 @@ function Procurement({
                 >
                   {
                     createdOrder
-                      .warehouse
+                      .warehouse ||
+                    selectedWarehouse ||
+                    "-"
                   }
                 </Typography>
 
@@ -3584,7 +3719,8 @@ function Procurement({
                   {
                     formatMoney(
                       createdOrder
-                        .order_value
+                        .order_value ||
+                      estimatedOrderValue
                     )
                   }
                 </Typography>
@@ -3643,7 +3779,6 @@ function Procurement({
           sx={{
             border:
               "1px solid #e5e7eb",
-
             borderRadius: 3
           }}
         >
@@ -3663,7 +3798,6 @@ function Procurement({
               }}
             />
 
-
             <Typography
               variant="h6"
               sx={{
@@ -3673,14 +3807,13 @@ function Procurement({
               Procurement Decision Engine
             </Typography>
 
-
             <Typography
               color="text.secondary"
               sx={{
                 mt: 0.5
               }}
             >
-              Enter a component and quantity, or send a procurement requirement from Inventory.
+              Select a component and required quantity, or send a procurement requirement from Inventory.
             </Typography>
 
           </CardContent>

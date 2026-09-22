@@ -8,6 +8,10 @@ from backend.app.models.supplier_component import (
     SupplierComponent
 )
 
+from backend.app.models.purchase_order_status_history import (
+    PurchaseOrderStatusHistory
+)
+
 from backend.app.models.supplier_availability import (
     SupplierAvailability
 )
@@ -26,4 +30,12 @@ from backend.app.models.supplier_performance import (
 
 from backend.app.models.purchase_order import (
     PurchaseOrder
+)
+
+from backend.app.models.shipment import (
+    Shipment
+)
+
+from backend.app.models.shipment_tracking_point import (
+    ShipmentTrackingPoint
 )

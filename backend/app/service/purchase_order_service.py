@@ -1,12 +1,5 @@
-from datetime import (
-    date,
-    datetime,
-    timedelta,
-    timezone
-)
-
+from datetime import date, datetime, timedelta, timezone
 from math import ceil
-
 from uuid import uuid4
 
 from sqlalchemy.orm import Session
@@ -16,14 +9,19 @@ from backend.app.models import (
     Inventory,
     InventoryTransaction,
     PurchaseOrder,
+    PurchaseOrderStatusHistory,
     Supplier,
     SupplierAvailability,
     SupplierComponent,
-    Vehicle
+    Vehicle,
 )
 
 from backend.app.service.stock_movement_service import (
-    StockMovementService
+    StockMovementService,
+)
+
+from backend.app.service.shipment_tracking_service import (
+    ShipmentTrackingService,
 )
 
 
@@ -32,15 +30,10 @@ from backend.app.service.stock_movement_service import (
 # ============================================================
 
 def utc_now():
-
     return (
         datetime
-        .now(
-            timezone.utc
-        )
-        .replace(
-            tzinfo=None
-        )
+        .now(timezone.utc)
+        .replace(tzinfo=None)
     )
 
 
@@ -55,27 +48,62 @@ class PurchaseOrderService:
     # ========================================================
 
     ALLOWED_TRACKING_STAGES = {
-
         "ORDER_PLACED",
-
         "SUPPLIER_CONFIRMED",
-
         "READY_FOR_DISPATCH",
-
         "DISPATCHED",
-
         "IN_TRANSIT",
-
         "ARRIVED_AT_WAREHOUSE",
-
         "PARTIALLY_RECEIVED",
-
         "RECEIVED",
-
-        "CANCELLED"
-
+        "CANCELLED",
     }
 
+    # ========================================================
+    # STRICT TRACKING STATE MACHINE
+    # ========================================================
+
+    TRACKING_TRANSITIONS = {
+
+        "ORDER_PLACED": {
+            "SUPPLIER_CONFIRMED",
+            "CANCELLED",
+        },
+
+        "SUPPLIER_CONFIRMED": {
+            "READY_FOR_DISPATCH",
+            "CANCELLED",
+        },
+
+        "READY_FOR_DISPATCH": {
+            "DISPATCHED",
+            "CANCELLED",
+        },
+
+        # Once shipment has physically left the supplier,
+        # normal cancellation is not allowed.
+        "DISPATCHED": {
+            "IN_TRANSIT",
+        },
+
+        "IN_TRANSIT": {
+            "ARRIVED_AT_WAREHOUSE",
+        },
+
+        "ARRIVED_AT_WAREHOUSE": {
+            "PARTIALLY_RECEIVED",
+            "RECEIVED",
+        },
+
+        "PARTIALLY_RECEIVED": {
+            "PARTIALLY_RECEIVED",
+            "RECEIVED",
+        },
+
+        "RECEIVED": set(),
+
+        "CANCELLED": set(),
+    }
 
     # ========================================================
     # GENERATE PURCHASE ORDER NUMBER
@@ -86,11 +114,8 @@ class PurchaseOrderService:
 
         current_date = (
             date.today()
-            .strftime(
-                "%Y%m%d"
-            )
+            .strftime("%Y%m%d")
         )
-
 
         random_code = (
             uuid4()
@@ -98,30 +123,240 @@ class PurchaseOrderService:
             .upper()
         )
 
-
         return (
-            f"EVPO-{current_date}-{random_code}"
+            f"EVPO-"
+            f"{current_date}-"
+            f"{random_code}"
         )
 
-
     # ========================================================
-    # VERIFY APP-CREATED ORDER
+    # VERIFY APP CREATED ORDER
     # ========================================================
 
     @staticmethod
     def validate_application_order(
-        purchase_order
+        purchase_order,
     ):
 
         if (
             purchase_order.source_type
-            != "APP_ORDER"
+            !=
+            "APP_ORDER"
         ):
 
             raise ValueError(
-                "Historical purchase orders cannot be modified."
+                "Historical purchase orders "
+                "cannot be modified."
             )
 
+    # ========================================================
+    # VALIDATE TRACKING TRANSITION
+    # ========================================================
+
+    @staticmethod
+    def validate_tracking_transition(
+        current_stage,
+        next_stage,
+    ):
+
+        current_stage = (
+            str(
+                current_stage
+                or
+                "ORDER_PLACED"
+            )
+            .strip()
+            .upper()
+        )
+
+        next_stage = (
+            str(next_stage)
+            .strip()
+            .upper()
+        )
+
+        if (
+            next_stage
+            not in
+            PurchaseOrderService
+            .ALLOWED_TRACKING_STAGES
+        ):
+
+            raise ValueError(
+                f"Invalid tracking stage: "
+                f"{next_stage}"
+            )
+
+        if current_stage == next_stage:
+
+            raise ValueError(
+                f"Purchase order is already "
+                f"at stage {current_stage}."
+            )
+
+        allowed_next_stages = (
+            PurchaseOrderService
+            .TRACKING_TRANSITIONS
+            .get(current_stage)
+        )
+
+        if allowed_next_stages is None:
+
+            raise ValueError(
+                f"Unknown current tracking stage: "
+                f"{current_stage}"
+            )
+
+        if (
+            next_stage
+            not in
+            allowed_next_stages
+        ):
+
+            allowed_text = (
+                ", ".join(
+                    sorted(
+                        allowed_next_stages
+                    )
+                )
+                if allowed_next_stages
+                else "None"
+            )
+
+            raise ValueError(
+                f"Invalid tracking transition: "
+                f"{current_stage} -> "
+                f"{next_stage}. "
+                f"Allowed next stages: "
+                f"{allowed_text}"
+            )
+
+    # ========================================================
+    # CREATE STATUS HISTORY
+    # ========================================================
+
+    @staticmethod
+    def add_status_history(
+        db: Session,
+        purchase_order_id: int,
+        from_stage,
+        to_stage,
+        location=None,
+        notes=None,
+    ):
+
+        history = (
+            PurchaseOrderStatusHistory(
+
+                purchase_order_id=(
+                    purchase_order_id
+                ),
+
+                from_stage=(
+                    str(from_stage)
+                    .strip()
+                    .upper()
+                    if from_stage
+                    else None
+                ),
+
+                to_stage=(
+                    str(to_stage)
+                    .strip()
+                    .upper()
+                ),
+
+                location=(
+                    str(location)
+                    .strip()
+                    if location
+                    else None
+                ),
+
+                notes=notes,
+
+                changed_at=utc_now(),
+            )
+        )
+
+        db.add(history)
+
+        return history
+
+    # ========================================================
+    # GET STATUS HISTORY
+    # ========================================================
+
+    @staticmethod
+    def get_status_history(
+        db: Session,
+        purchase_order_id: int,
+    ):
+
+        purchase_order = (
+            db.query(PurchaseOrder)
+            .filter(
+                PurchaseOrder.id
+                ==
+                purchase_order_id
+            )
+            .first()
+        )
+
+        if purchase_order is None:
+
+            raise ValueError(
+                "Purchase order not found."
+            )
+
+        rows = (
+            db.query(
+                PurchaseOrderStatusHistory
+            )
+            .filter(
+                PurchaseOrderStatusHistory
+                .purchase_order_id
+                ==
+                purchase_order_id
+            )
+            .order_by(
+                PurchaseOrderStatusHistory
+                .changed_at
+                .asc(),
+
+                PurchaseOrderStatusHistory
+                .id
+                .asc(),
+            )
+            .all()
+        )
+
+        return [
+            {
+                "id":
+                    row.id,
+
+                "purchase_order_id":
+                    row.purchase_order_id,
+
+                "from_stage":
+                    row.from_stage,
+
+                "to_stage":
+                    row.to_stage,
+
+                "location":
+                    row.location,
+
+                "notes":
+                    row.notes,
+
+                "changed_at":
+                    row.changed_at,
+            }
+
+            for row in rows
+        ]
 
     # ========================================================
     # SERIALIZE PURCHASE ORDER
@@ -129,41 +364,30 @@ class PurchaseOrderService:
 
     @staticmethod
     def serialize_order(
-
         purchase_order,
-
         supplier=None,
-
         component=None,
-
-        vehicle=None
-
+        vehicle=None,
     ):
 
         today = date.today()
-
 
         quantity_ordered = float(
             purchase_order.quantity_ordered
             or 0
         )
 
-
         quantity_received = float(
             purchase_order.quantity_received
             or 0
         )
 
-
         remaining_quantity = max(
-
             quantity_ordered
             -
             quantity_received,
-
-            0
+            0,
         )
-
 
         # ----------------------------------------------------
         # DAYS UNTIL EXPECTED ARRIVAL
@@ -176,53 +400,40 @@ class PurchaseOrderService:
         ):
 
             days_until_expected_arrival = (
-
                 purchase_order
                 .expected_delivery_date
                 -
                 today
-
             ).days
 
         else:
 
-            days_until_expected_arrival = None
-
+            days_until_expected_arrival = (
+                None
+            )
 
         # ----------------------------------------------------
         # DELAY STATUS
         # ----------------------------------------------------
 
         is_delayed = bool(
-
             remaining_quantity > 0
-
             and
-
             purchase_order
             .expected_delivery_date
             is not None
-
             and
-
             purchase_order
             .expected_delivery_date
-            < today
-
+            <
+            today
             and
-
             purchase_order.order_status
             not in {
                 "DELIVERED",
-                "CANCELLED"
+                "CANCELLED",
             }
-
         )
-
-
-        # ----------------------------------------------------
-        # RESPONSE
-        # ----------------------------------------------------
 
         return {
 
@@ -235,85 +446,69 @@ class PurchaseOrderService:
             "po_date":
                 purchase_order.po_date,
 
-            # ------------------------------------------------
             # SUPPLIER
-            # ------------------------------------------------
 
             "supplier_id":
                 purchase_order.supplier_id,
 
             "supplier_code":
-
-                supplier.supplier_code
-
-                if supplier
-
-                else None,
+                (
+                    supplier.supplier_code
+                    if supplier
+                    else None
+                ),
 
             "supplier_name":
+                (
+                    supplier.supplier_name
+                    if supplier
+                    else None
+                ),
 
-                supplier.supplier_name
-
-                if supplier
-
-                else None,
-
-            # ------------------------------------------------
             # COMPONENT
-            # ------------------------------------------------
 
             "component_id":
                 purchase_order.component_id,
 
             "part_id":
-
-                component.part_id
-
-                if component
-
-                else None,
+                (
+                    component.part_id
+                    if component
+                    else None
+                ),
 
             "part_name":
+                (
+                    component.part_name
+                    if component
+                    else None
+                ),
 
-                component.part_name
-
-                if component
-
-                else None,
-
-            # ------------------------------------------------
             # VEHICLE
-            # ------------------------------------------------
 
             "vehicle_id":
                 purchase_order.vehicle_id,
 
             "vehicle_code":
-
-                vehicle.vehicle_code
-
-                if vehicle
-
-                else None,
+                (
+                    vehicle.vehicle_code
+                    if vehicle
+                    else None
+                ),
 
             "vehicle_type":
+                (
+                    vehicle.vehicle_type
+                    if vehicle
+                    else None
+                ),
 
-                vehicle.vehicle_type
-
-                if vehicle
-
-                else None,
-
-            # ------------------------------------------------
             # DESTINATION
-            # ------------------------------------------------
 
             "warehouse":
                 purchase_order.warehouse,
 
-            # ------------------------------------------------
             # QUANTITY
-            # ------------------------------------------------
 
             "quantity_ordered":
                 quantity_ordered,
@@ -324,9 +519,7 @@ class PurchaseOrderService:
             "remaining_quantity":
                 remaining_quantity,
 
-            # ------------------------------------------------
             # VALUE
-            # ------------------------------------------------
 
             "unit_cost":
                 float(
@@ -340,9 +533,7 @@ class PurchaseOrderService:
                     or 0
                 ),
 
-            # ------------------------------------------------
             # STATUS
-            # ------------------------------------------------
 
             "order_status":
                 purchase_order.order_status,
@@ -356,9 +547,7 @@ class PurchaseOrderService:
             "tracking_notes":
                 purchase_order.tracking_notes,
 
-            # ------------------------------------------------
             # DELIVERY
-            # ------------------------------------------------
 
             "expected_delivery_date":
                 purchase_order
@@ -380,27 +569,22 @@ class PurchaseOrderService:
             "is_delayed":
                 is_delayed,
 
-            # ------------------------------------------------
             # TRACKING TIMES
-            # ------------------------------------------------
 
             "last_tracking_update":
                 purchase_order
                 .last_tracking_update,
 
             "dispatched_at":
-                purchase_order
-                .dispatched_at,
+                purchase_order.dispatched_at,
 
             "arrived_at_warehouse_at":
                 purchase_order
                 .arrived_at_warehouse_at,
 
             "source_type":
-                purchase_order.source_type
-
+                purchase_order.source_type,
         }
-
 
     # ========================================================
     # GET ONE PURCHASE ORDER
@@ -408,11 +592,8 @@ class PurchaseOrderService:
 
     @staticmethod
     def get_order(
-
         db: Session,
-
-        purchase_order_id: int
-
+        purchase_order_id: int,
     ):
 
         row = (
@@ -421,7 +602,7 @@ class PurchaseOrderService:
                 PurchaseOrder,
                 Supplier,
                 Component,
-                Vehicle
+                Vehicle,
             )
 
             .join(
@@ -429,7 +610,7 @@ class PurchaseOrderService:
 
                 PurchaseOrder.supplier_id
                 ==
-                Supplier.id
+                Supplier.id,
             )
 
             .join(
@@ -437,7 +618,7 @@ class PurchaseOrderService:
 
                 PurchaseOrder.component_id
                 ==
-                Component.id
+                Component.id,
             )
 
             .outerjoin(
@@ -445,7 +626,7 @@ class PurchaseOrderService:
 
                 PurchaseOrder.vehicle_id
                 ==
-                Vehicle.id
+                Vehicle.id,
             )
 
             .filter(
@@ -455,9 +636,7 @@ class PurchaseOrderService:
             )
 
             .first()
-
         )
-
 
         if row is None:
 
@@ -465,14 +644,12 @@ class PurchaseOrderService:
                 "Purchase order not found."
             )
 
-
         (
             purchase_order,
             supplier,
             component,
-            vehicle
+            vehicle,
         ) = row
-
 
         return (
             PurchaseOrderService
@@ -482,20 +659,13 @@ class PurchaseOrderService:
                     purchase_order
                 ),
 
-                supplier=(
-                    supplier
-                ),
+                supplier=supplier,
 
-                component=(
-                    component
-                ),
+                component=component,
 
-                vehicle=(
-                    vehicle
-                )
+                vehicle=vehicle,
             )
         )
-
 
     # ========================================================
     # GET PURCHASE ORDERS
@@ -503,11 +673,8 @@ class PurchaseOrderService:
 
     @staticmethod
     def get_orders(
-
         db: Session,
-
-        include_historical: bool = False
-
+        include_historical: bool = False,
     ):
 
         query = (
@@ -516,7 +683,7 @@ class PurchaseOrderService:
                 PurchaseOrder,
                 Supplier,
                 Component,
-                Vehicle
+                Vehicle,
             )
 
             .join(
@@ -524,7 +691,7 @@ class PurchaseOrderService:
 
                 PurchaseOrder.supplier_id
                 ==
-                Supplier.id
+                Supplier.id,
             )
 
             .join(
@@ -532,7 +699,7 @@ class PurchaseOrderService:
 
                 PurchaseOrder.component_id
                 ==
-                Component.id
+                Component.id,
             )
 
             .outerjoin(
@@ -540,47 +707,27 @@ class PurchaseOrderService:
 
                 PurchaseOrder.vehicle_id
                 ==
-                Vehicle.id
+                Vehicle.id,
             )
-
         )
-
-
-        # ----------------------------------------------------
-        # DEFAULT:
-        # Show only orders created from our application.
-        #
-        # Historical CSV POs can still be requested using:
-        #
-        # include_historical=true
-        # ----------------------------------------------------
 
         if not include_historical:
 
             query = query.filter(
-
                 PurchaseOrder.source_type
                 ==
                 "APP_ORDER"
-
             )
 
-
         rows = (
-
             query
-
             .order_by(
                 PurchaseOrder.id.desc()
             )
-
             .all()
-
         )
 
-
         results = []
-
 
         for row in rows:
 
@@ -588,12 +735,10 @@ class PurchaseOrderService:
                 purchase_order,
                 supplier,
                 component,
-                vehicle
+                vehicle,
             ) = row
 
-
             results.append(
-
                 PurchaseOrderService
                 .serialize_order(
 
@@ -601,24 +746,15 @@ class PurchaseOrderService:
                         purchase_order
                     ),
 
-                    supplier=(
-                        supplier
-                    ),
+                    supplier=supplier,
 
-                    component=(
-                        component
-                    ),
+                    component=component,
 
-                    vehicle=(
-                        vehicle
-                    )
+                    vehicle=vehicle,
                 )
-
             )
 
-
         return results
-
 
     # ========================================================
     # CREATE PURCHASE ORDER
@@ -626,59 +762,40 @@ class PurchaseOrderService:
 
     @staticmethod
     def create_order(
-
         db: Session,
-
         supplier_id: int,
-
         component_id: int,
-
         warehouse: str,
-
         quantity_ordered: float,
-
         vehicle_id=None,
-
         required_date=None,
-
-        urgency=None
-
+        urgency=None,
     ):
-
-        # ----------------------------------------------------
-        # QUANTITY
-        # ----------------------------------------------------
 
         quantity_ordered = float(
             quantity_ordered
         )
 
-
         if quantity_ordered <= 0:
 
             raise ValueError(
-                "Purchase order quantity must be greater than zero."
+                "Purchase order quantity "
+                "must be greater than zero."
             )
-
 
         # ----------------------------------------------------
         # SUPPLIER
         # ----------------------------------------------------
 
         supplier = (
-
             db.query(Supplier)
-
             .filter(
                 Supplier.id
                 ==
                 supplier_id
             )
-
             .first()
-
         )
-
 
         if supplier is None:
 
@@ -686,32 +803,25 @@ class PurchaseOrderService:
                 "Supplier not found."
             )
 
-
         if not supplier.is_active:
 
             raise ValueError(
                 "Selected supplier is inactive."
             )
 
-
         # ----------------------------------------------------
         # COMPONENT
         # ----------------------------------------------------
 
         component = (
-
             db.query(Component)
-
             .filter(
                 Component.id
                 ==
                 component_id
             )
-
             .first()
-
         )
-
 
         if component is None:
 
@@ -719,27 +829,24 @@ class PurchaseOrderService:
                 "Component not found."
             )
 
-
         # ----------------------------------------------------
         # DESTINATION WAREHOUSE
         # ----------------------------------------------------
 
-        warehouse = str(
-            warehouse
-        ).strip()
-
+        warehouse = (
+            str(warehouse)
+            .strip()
+        )
 
         if not warehouse:
 
             raise ValueError(
-                "Destination warehouse is required."
+                "Destination warehouse "
+                "is required."
             )
 
-
         destination_inventory = (
-
             db.query(Inventory)
-
             .filter(
                 Inventory.component_id
                 ==
@@ -747,36 +854,27 @@ class PurchaseOrderService:
 
                 Inventory.warehouse
                 ==
-                warehouse
+                warehouse,
             )
-
             .first()
-
         )
-
 
         if destination_inventory is None:
 
             raise ValueError(
-
                 "Selected destination warehouse "
                 "does not contain an inventory "
                 "record for this component."
-
             )
 
-
         # ----------------------------------------------------
-        # SUPPLIER-COMPONENT RELATIONSHIP
+        # SUPPLIER COMPONENT
         # ----------------------------------------------------
 
         supplier_component = (
-
-            db.query(
-                SupplierComponent
-            )
-
+            db.query(SupplierComponent)
             .filter(
+
                 SupplierComponent.supplier_id
                 ==
                 supplier_id,
@@ -787,37 +885,27 @@ class PurchaseOrderService:
 
                 SupplierComponent.is_approved
                 ==
-                True
+                True,
             )
-
             .first()
-
         )
-
 
         if supplier_component is None:
 
             raise ValueError(
-
                 "The selected supplier is not "
                 "approved for this component."
-
             )
-
 
         # ----------------------------------------------------
         # MOQ
         # ----------------------------------------------------
 
         minimum_order_quantity = float(
-
             supplier_component
             .minimum_order_quantity
-
             or 1
-
         )
-
 
         if (
             quantity_ordered
@@ -826,27 +914,22 @@ class PurchaseOrderService:
         ):
 
             raise ValueError(
-
                 "Requested quantity is below "
-                "the supplier minimum order quantity. "
-                f"MOQ: {minimum_order_quantity}"
-
+                "the supplier minimum order "
+                "quantity. "
+                f"MOQ: "
+                f"{minimum_order_quantity}"
             )
 
-
         # ----------------------------------------------------
-        # MONTHLY / MAX CAPACITY
+        # MAXIMUM CAPACITY
         # ----------------------------------------------------
 
         maximum_capacity = float(
-
             supplier_component
             .maximum_capacity
-
             or 0
-
         )
-
 
         if (
             maximum_capacity > 0
@@ -857,50 +940,45 @@ class PurchaseOrderService:
         ):
 
             raise ValueError(
-
                 "Requested quantity exceeds "
                 "supplier maximum capacity. "
-                f"Capacity: {maximum_capacity}"
-
+                f"Capacity: "
+                f"{maximum_capacity}"
             )
-
 
         # ----------------------------------------------------
         # SUPPLIER AVAILABILITY
         # ----------------------------------------------------
 
         supplier_availability = (
-
             db.query(
                 SupplierAvailability
             )
-
             .filter(
-                SupplierAvailability.supplier_id
+
+                SupplierAvailability
+                .supplier_id
                 ==
                 supplier_id,
 
-                SupplierAvailability.component_id
+                SupplierAvailability
+                .component_id
                 ==
-                component_id
+                component_id,
             )
-
             .first()
-
         )
 
-
-        if supplier_availability is not None:
+        if (
+            supplier_availability
+            is not None
+        ):
 
             available_to_promise = float(
-
                 supplier_availability
                 .available_to_promise
-
                 or 0
-
             )
-
 
             if (
                 quantity_ordered
@@ -909,14 +987,11 @@ class PurchaseOrderService:
             ):
 
                 raise ValueError(
-
                     "Requested quantity exceeds "
                     "supplier available-to-promise. "
                     f"Available-to-promise: "
                     f"{available_to_promise}"
-
                 )
-
 
         # ----------------------------------------------------
         # VEHICLE
@@ -924,23 +999,17 @@ class PurchaseOrderService:
 
         vehicle = None
 
-
         if vehicle_id is not None:
 
             vehicle = (
-
                 db.query(Vehicle)
-
                 .filter(
                     Vehicle.id
                     ==
                     vehicle_id
                 )
-
                 .first()
-
             )
-
 
             if vehicle is None:
 
@@ -948,61 +1017,38 @@ class PurchaseOrderService:
                     "Vehicle not found."
                 )
 
-
         # ----------------------------------------------------
         # LEAD TIME
-        #
-        # IMPORTANT:
-        # Supplier-component mapping is the source.
         # ----------------------------------------------------
 
         lead_time_days = int(
-
             supplier_component
             .standard_lead_time_days
-
             or 0
-
         )
 
-
         expected_delivery_date = (
-
             date.today()
-
             +
             timedelta(
                 days=lead_time_days
             )
-
         )
-
 
         # ----------------------------------------------------
         # PRICE
-        #
-        # IMPORTANT:
-        # Component-specific supplier price.
         # ----------------------------------------------------
 
         unit_cost = float(
-
-            supplier_component
-            .unit_price
-
+            supplier_component.unit_price
             or 0
-
         )
 
-
         order_value = (
-
             quantity_ordered
             *
             unit_cost
-
         )
-
 
         # ----------------------------------------------------
         # CREATE PO
@@ -1015,41 +1061,23 @@ class PurchaseOrderService:
                 .generate_po_number()
             ),
 
-            po_date=(
-                date.today()
-            ),
+            po_date=date.today(),
 
-            supplier_id=(
-                supplier_id
-            ),
+            supplier_id=supplier_id,
 
-            component_id=(
-                component_id
-            ),
+            component_id=component_id,
 
-            vehicle_id=(
-                vehicle_id
-            ),
+            vehicle_id=vehicle_id,
 
-            required_date=(
-                required_date
-            ),
+            required_date=required_date,
 
             urgency=(
-
-                str(
-                    urgency
-                ).upper()
-
+                str(urgency).upper()
                 if urgency
-
                 else None
-
             ),
 
-            warehouse=(
-                warehouse
-            ),
+            warehouse=warehouse,
 
             quantity_ordered=(
                 quantity_ordered
@@ -1057,9 +1085,7 @@ class PurchaseOrderService:
 
             quantity_received=0,
 
-            unit_cost=(
-                unit_cost
-            ),
+            unit_cost=unit_cost,
 
             expected_delivery_date=(
                 expected_delivery_date
@@ -1067,9 +1093,7 @@ class PurchaseOrderService:
 
             actual_delivery_date=None,
 
-            order_status=(
-                "PLACED"
-            ),
+            order_status="PLACED",
 
             tracking_stage=(
                 "ORDER_PLACED"
@@ -1093,95 +1117,120 @@ class PurchaseOrderService:
 
             arrived_at_warehouse_at=None,
 
-            # Remaining order quantity
             quantity_shortage=(
                 quantity_ordered
             ),
 
             delivery_delay_days=0,
 
-            order_value=(
-                order_value
-            ),
+            order_value=order_value,
 
-            source_type=(
-                "APP_ORDER"
-            )
-
+            source_type="APP_ORDER",
         )
 
+        try:
 
-        db.add(
-            purchase_order
-        )
-
-
-        # ----------------------------------------------------
-        # RESERVE SUPPLIER CAPACITY
-        # ----------------------------------------------------
-
-        if (
-            supplier_availability
-            is not None
-        ):
-
-            reserved_units = int(
-                ceil(
-                    quantity_ordered
-                )
+            db.add(
+                purchase_order
             )
 
+            # Need PO ID before history.
 
-            supplier_availability.committed_quantity = (
+            db.flush()
 
-                int(
-                    supplier_availability
-                    .committed_quantity
-                    or 0
-                )
+            # ------------------------------------------------
+            # INITIAL HISTORY
+            # ------------------------------------------------
 
-                +
-                reserved_units
+            PurchaseOrderService.add_status_history(
 
-            )
+                db=db,
 
-
-            supplier_availability.available_to_promise = max(
-
-                int(
-                    supplier_availability
-                    .available_quantity
-                    or 0
-                )
-
-                -
-
-                int(
-                    supplier_availability
-                    .committed_quantity
-                    or 0
+                purchase_order_id=(
+                    purchase_order.id
                 ),
 
-                0
+                from_stage=None,
 
+                to_stage=(
+                    "ORDER_PLACED"
+                ),
+
+                location=(
+                    purchase_order
+                    .current_location
+                ),
+
+                notes=(
+                    "Purchase order created."
+                ),
             )
 
+            # ------------------------------------------------
+            # RESERVE SUPPLIER CAPACITY
+            # ------------------------------------------------
 
-            supplier_availability.last_updated = (
-                utc_now()
+            if (
+                supplier_availability
+                is not None
+            ):
+
+                reserved_units = int(
+                    ceil(
+                        quantity_ordered
+                    )
+                )
+
+                supplier_availability \
+                    .committed_quantity = (
+
+                        int(
+                            supplier_availability
+                            .committed_quantity
+                            or 0
+                        )
+
+                        +
+
+                        reserved_units
+                    )
+
+                supplier_availability \
+                    .available_to_promise = max(
+
+                        int(
+                            supplier_availability
+                            .available_quantity
+                            or 0
+                        )
+
+                        -
+
+                        int(
+                            supplier_availability
+                            .committed_quantity
+                            or 0
+                        ),
+
+                        0,
+                    )
+
+                supplier_availability \
+                    .last_updated = (
+                        utc_now()
+                    )
+
+            db.commit()
+
+            db.refresh(
+                purchase_order
             )
 
+        except Exception:
 
-        # ----------------------------------------------------
-        # COMMIT
-        # ----------------------------------------------------
+            db.rollback()
 
-        db.commit()
-
-        db.refresh(
-            purchase_order
-        )
-
+            raise
 
         return (
             PurchaseOrderService
@@ -1191,10 +1240,9 @@ class PurchaseOrderService:
 
                 purchase_order_id=(
                     purchase_order.id
-                )
+                ),
             )
         )
-
 
     # ========================================================
     # UPDATE PURCHASE ORDER TRACKING
@@ -1202,35 +1250,22 @@ class PurchaseOrderService:
 
     @staticmethod
     def update_tracking(
-
         db: Session,
-
         purchase_order_id: int,
-
         tracking_stage: str,
-
         current_location=None,
-
-        tracking_notes=None
-
+        tracking_notes=None,
     ):
 
         purchase_order = (
-
-            db.query(
-                PurchaseOrder
-            )
-
+            db.query(PurchaseOrder)
             .filter(
                 PurchaseOrder.id
                 ==
                 purchase_order_id
             )
-
             .first()
-
         )
-
 
         if purchase_order is None:
 
@@ -1238,11 +1273,10 @@ class PurchaseOrderService:
                 "Purchase order not found."
             )
 
-
-        PurchaseOrderService.validate_application_order(
-            purchase_order
-        )
-
+        PurchaseOrderService \
+            .validate_application_order(
+                purchase_order
+            )
 
         if (
             purchase_order.order_status
@@ -1251,14 +1285,15 @@ class PurchaseOrderService:
         ):
 
             raise ValueError(
-                "Cancelled purchase orders cannot be updated."
+                "Cancelled purchase orders "
+                "cannot be updated."
             )
 
-
-        stage = str(
-            tracking_stage
-        ).strip().upper()
-
+        stage = (
+            str(tracking_stage)
+            .strip()
+            .upper()
+        )
 
         if (
             stage
@@ -1271,208 +1306,708 @@ class PurchaseOrderService:
                 "Invalid tracking stage."
             )
 
+        # ----------------------------------------------------
+        # RECEIPT STAGES MUST USE RECEIVE API
+        # ----------------------------------------------------
+
+        if stage in {
+            "PARTIALLY_RECEIVED",
+            "RECEIVED",
+        }:
+
+            raise ValueError(
+                f"{stage} cannot be manually "
+                f"selected. "
+                "Use the Receive action."
+            )
+
+        previous_stage = (
+            purchase_order.tracking_stage
+            or
+            "ORDER_PLACED"
+        )
+
+        # ----------------------------------------------------
+        # STRICT STATE TRANSITION
+        # ----------------------------------------------------
+
+        PurchaseOrderService \
+            .validate_tracking_transition(
+
+                current_stage=(
+                    previous_stage
+                ),
+
+                next_stage=stage,
+            )
 
         quantity_ordered = float(
-
-            purchase_order
-            .quantity_ordered
-
+            purchase_order.quantity_ordered
             or 0
-
         )
-
 
         quantity_received = float(
-
-            purchase_order
-            .quantity_received
-
+            purchase_order.quantity_received
             or 0
-
         )
 
-
         remaining_quantity = max(
-
             quantity_ordered
             -
             quantity_received,
-
-            0
-
+            0,
         )
-
-
-        # ----------------------------------------------------
-        # PROTECT STOCK LOGIC
-        #
-        # RECEIVED / PARTIALLY_RECEIVED should normally be set
-        # by the Receive action, not manually.
-        # ----------------------------------------------------
-
-        if (
-            stage
-            ==
-            "RECEIVED"
-            and
-            remaining_quantity > 0
-        ):
-
-            raise ValueError(
-
-                "This order still has unreceived quantity. "
-                "Use the Receive action first."
-
-            )
-
-
-        if (
-            stage
-            ==
-            "PARTIALLY_RECEIVED"
-            and
-            (
-                quantity_received <= 0
-                or
-                remaining_quantity <= 0
-            )
-        ):
-
-            raise ValueError(
-
-                "PARTIALLY_RECEIVED can only be used "
-                "after a partial stock receipt."
-
-            )
-
 
         previous_status = (
             purchase_order.order_status
         )
 
+        now = utc_now()
 
-        purchase_order.tracking_stage = (
-            stage
+        try:
+
+            purchase_order.tracking_stage = (
+                stage
+            )
+
+            if current_location:
+
+                purchase_order.current_location = (
+                    str(current_location)
+                    .strip()
+                )
+
+            if tracking_notes is not None:
+
+                purchase_order.tracking_notes = (
+                    tracking_notes
+                )
+
+            purchase_order \
+                .last_tracking_update = now
+
+            # ------------------------------------------------
+            # SUPPLIER CONFIRMED
+            # ------------------------------------------------
+
+            if (
+                stage
+                ==
+                "SUPPLIER_CONFIRMED"
+            ):
+
+                purchase_order.order_status = (
+                    "CONFIRMED"
+                )
+
+            # ------------------------------------------------
+            # READY FOR DISPATCH
+            # ------------------------------------------------
+
+            elif (
+                stage
+                ==
+                "READY_FOR_DISPATCH"
+            ):
+
+                purchase_order.order_status = (
+                    "CONFIRMED"
+                )
+
+            # ------------------------------------------------
+            # DISPATCHED
+            # ------------------------------------------------
+
+            elif stage == "DISPATCHED":
+
+                purchase_order.order_status = (
+                    "CONFIRMED"
+                )
+
+                if (
+                    purchase_order
+                    .dispatched_at
+                    is None
+                ):
+
+                    purchase_order.dispatched_at = (
+                        now
+                    )
+
+            # ------------------------------------------------
+            # IN TRANSIT
+            # ------------------------------------------------
+
+            elif stage == "IN_TRANSIT":
+
+                purchase_order.order_status = (
+                    "IN_TRANSIT"
+                )
+
+                if (
+                    purchase_order
+                    .dispatched_at
+                    is None
+                ):
+
+                    purchase_order.dispatched_at = (
+                        now
+                    )
+
+            # ------------------------------------------------
+            # ARRIVED AT WAREHOUSE
+            # ------------------------------------------------
+
+            elif (
+                stage
+                ==
+                "ARRIVED_AT_WAREHOUSE"
+            ):
+
+                purchase_order.order_status = (
+                    "IN_TRANSIT"
+                )
+
+                purchase_order.current_location = (
+                    current_location
+                    or
+                    purchase_order.warehouse
+                )
+
+                if (
+                    purchase_order
+                    .arrived_at_warehouse_at
+                    is None
+                ):
+
+                    purchase_order \
+                        .arrived_at_warehouse_at = (
+                            now
+                        )
+
+            # ------------------------------------------------
+            # CANCELLED
+            # ------------------------------------------------
+
+            elif stage == "CANCELLED":
+
+                purchase_order.order_status = (
+                    "CANCELLED"
+                )
+
+                if (
+                    previous_status
+                    !=
+                    "CANCELLED"
+                ):
+
+                    remaining_units = int(
+                        ceil(
+                            remaining_quantity
+                        )
+                    )
+
+                    availability = (
+                        db.query(
+                            SupplierAvailability
+                        )
+                        .filter(
+
+                            SupplierAvailability
+                            .supplier_id
+                            ==
+                            purchase_order
+                            .supplier_id,
+
+                            SupplierAvailability
+                            .component_id
+                            ==
+                            purchase_order
+                            .component_id,
+                        )
+                        .first()
+                    )
+
+                    if (
+                        availability
+                        is not None
+                    ):
+
+                        availability \
+                            .committed_quantity = max(
+
+                                int(
+                                    availability
+                                    .committed_quantity
+                                    or 0
+                                )
+
+                                -
+
+                                remaining_units,
+
+                                0,
+                            )
+
+                        availability \
+                            .available_to_promise = max(
+
+                                int(
+                                    availability
+                                    .available_quantity
+                                    or 0
+                                )
+
+                                -
+
+                                int(
+                                    availability
+                                    .committed_quantity
+                                    or 0
+                                ),
+
+                                0,
+                            )
+
+                        availability \
+                            .last_updated = (
+                                now
+                            )
+
+            # ------------------------------------------------
+            # CREATE PO STATUS HISTORY
+            # ------------------------------------------------
+
+            PurchaseOrderService \
+                .add_status_history(
+
+                    db=db,
+
+                    purchase_order_id=(
+                        purchase_order.id
+                    ),
+
+                    from_stage=(
+                        previous_stage
+                    ),
+
+                    to_stage=stage,
+
+                    location=(
+                        purchase_order
+                        .current_location
+                    ),
+
+                    notes=(
+                        tracking_notes
+                    ),
+                )
+
+            # ------------------------------------------------
+            # AUTOMATIC SHIPMENT CREATION
+            # ------------------------------------------------
+            #
+            # When the PO reaches DISPATCHED,
+            # automatically create its shipment.
+            #
+            # commit=False is important:
+            #
+            # PO update + history + shipment +
+            # initial GPS point are committed together.
+            # ------------------------------------------------
+
+            if stage == "DISPATCHED":
+
+                ShipmentTrackingService \
+                    .create_shipment(
+
+                        db=db,
+
+                        purchase_order_id=(
+                            purchase_order.id
+                        ),
+
+                        commit=False,
+                    )
+
+            # ------------------------------------------------
+            # ONE TRANSACTION
+            # ------------------------------------------------
+
+            db.commit()
+
+        except Exception:
+
+            db.rollback()
+
+            raise
+
+        return (
+            PurchaseOrderService
+            .get_order(
+
+                db=db,
+
+                purchase_order_id=(
+                    purchase_order_id
+                ),
+            )
         )
 
+    # ========================================================
+    # RECEIVE PURCHASE ORDER
+    # ========================================================
 
-        if current_location:
+    @staticmethod
+    def receive_order(
+        db: Session,
+        purchase_order_id: int,
+        quantity_received: float,
+    ):
 
-            purchase_order.current_location = (
-                str(
-                    current_location
-                ).strip()
+        purchase_order = (
+            db.query(PurchaseOrder)
+            .filter(
+                PurchaseOrder.id
+                ==
+                purchase_order_id
+            )
+            .first()
+        )
+
+        if purchase_order is None:
+
+            raise ValueError(
+                "Purchase order not found."
             )
 
-
-        if tracking_notes is not None:
-
-            purchase_order.tracking_notes = (
-                tracking_notes
+        PurchaseOrderService \
+            .validate_application_order(
+                purchase_order
             )
 
+        # ----------------------------------------------------
+        # STATUS VALIDATION
+        # ----------------------------------------------------
 
-        purchase_order.last_tracking_update = (
+        if (
+            purchase_order.order_status
+            ==
+            "CANCELLED"
+        ):
+
+            raise ValueError(
+                "Cancelled purchase order "
+                "cannot be received."
+            )
+
+        if (
+            purchase_order.order_status
+            ==
+            "DELIVERED"
+        ):
+
+            raise ValueError(
+                "Purchase order has already "
+                "been fully received."
+            )
+
+        # ----------------------------------------------------
+        # MATERIAL MUST ARRIVE BEFORE RECEIPT
+        # ----------------------------------------------------
+
+        current_stage = (
+            purchase_order.tracking_stage
+            or
+            "ORDER_PLACED"
+        )
+
+        if current_stage not in {
+            "ARRIVED_AT_WAREHOUSE",
+            "PARTIALLY_RECEIVED",
+        }:
+
+            raise ValueError(
+                "Purchase order cannot be "
+                "received before it arrives "
+                "at the warehouse. "
+                f"Current stage: "
+                f"{current_stage}"
+            )
+
+        # ----------------------------------------------------
+        # QUANTITY
+        # ----------------------------------------------------
+
+        quantity_received = float(
+            quantity_received
+        )
+
+        if quantity_received <= 0:
+
+            raise ValueError(
+                "Received quantity must be "
+                "greater than zero."
+            )
+
+        ordered_quantity = float(
+            purchase_order.quantity_ordered
+            or 0
+        )
+
+        already_received = float(
+            purchase_order.quantity_received
+            or 0
+        )
+
+        remaining_quantity = max(
+            ordered_quantity
+            -
+            already_received,
+            0,
+        )
+
+        if (
+            quantity_received
+            >
+            remaining_quantity
+        ):
+
+            raise ValueError(
+                "Received quantity exceeds "
+                "the remaining PO quantity. "
+                f"Remaining quantity: "
+                f"{remaining_quantity}"
+            )
+
+        # ----------------------------------------------------
+        # DESTINATION INVENTORY
+        # ----------------------------------------------------
+
+        inventory = (
+            db.query(Inventory)
+            .filter(
+
+                Inventory.component_id
+                ==
+                purchase_order.component_id,
+
+                Inventory.warehouse
+                ==
+                purchase_order.warehouse,
+            )
+            .first()
+        )
+
+        if inventory is None:
+
+            raise ValueError(
+                "Destination inventory record "
+                "does not exist."
+            )
+
+        previous_stage = (
+            purchase_order.tracking_stage
+        )
+
+        transaction_time = (
             utc_now()
         )
 
+        try:
 
-        # ----------------------------------------------------
-        # ORDER PLACED
-        # ----------------------------------------------------
+            # ------------------------------------------------
+            # UPDATE INVENTORY
+            # ------------------------------------------------
 
-        if stage == "ORDER_PLACED":
+            inventory.current_stock = (
 
-            purchase_order.order_status = (
-                "PLACED"
-            )
-
-
-        # ----------------------------------------------------
-        # SUPPLIER CONFIRMED
-        # ----------------------------------------------------
-
-        elif stage == "SUPPLIER_CONFIRMED":
-
-            purchase_order.order_status = (
-                "CONFIRMED"
-            )
-
-
-        # ----------------------------------------------------
-        # READY FOR DISPATCH
-        # ----------------------------------------------------
-
-        elif stage == "READY_FOR_DISPATCH":
-
-            purchase_order.order_status = (
-                "CONFIRMED"
-            )
-
-
-        # ----------------------------------------------------
-        # DISPATCHED
-        # ----------------------------------------------------
-
-        elif stage == "DISPATCHED":
-
-            purchase_order.order_status = (
-                "CONFIRMED"
-            )
-
-
-            if (
-                purchase_order.dispatched_at
-                is None
-            ):
-
-                purchase_order.dispatched_at = (
-                    utc_now()
+                float(
+                    inventory.current_stock
+                    or 0
                 )
 
+                +
 
-        # ----------------------------------------------------
-        # IN TRANSIT
-        # ----------------------------------------------------
-
-        elif stage == "IN_TRANSIT":
-
-            purchase_order.order_status = (
-                "IN_TRANSIT"
+                quantity_received
             )
 
-
-            if (
-                purchase_order.dispatched_at
-                is None
-            ):
-
-                purchase_order.dispatched_at = (
-                    utc_now()
+            StockMovementService \
+                .recalculate_inventory(
+                    inventory
                 )
 
+            # ------------------------------------------------
+            # INVENTORY TRANSACTION
+            # ------------------------------------------------
 
-        # ----------------------------------------------------
-        # ARRIVED AT WAREHOUSE
-        # ----------------------------------------------------
+            inventory_transaction = (
+                InventoryTransaction(
 
-        elif stage == "ARRIVED_AT_WAREHOUSE":
+                    transaction_id=(
+                        StockMovementService
+                        .generate_transaction_id(
+                            db
+                        )
+                    ),
 
-            purchase_order.order_status = (
-                "IN_TRANSIT"
+                    component_id=(
+                        purchase_order
+                        .component_id
+                    ),
+
+                    warehouse=(
+                        purchase_order
+                        .warehouse
+                    ),
+
+                    transaction_type=(
+                        "RECEIPT"
+                    ),
+
+                    quantity=(
+                        quantity_received
+                    ),
+
+                    reference_id=(
+                        purchase_order
+                        .po_number
+                    ),
+
+                    transaction_date=(
+                        transaction_time
+                    ),
+
+                    created_at=(
+                        transaction_time
+                    ),
+                )
             )
 
+            db.add(
+                inventory_transaction
+            )
+
+            # ------------------------------------------------
+            # UPDATE PO QUANTITY
+            # ------------------------------------------------
+
+            purchase_order.quantity_received = (
+
+                already_received
+
+                +
+
+                quantity_received
+            )
+
+            remaining_after_receipt = max(
+
+                ordered_quantity
+
+                -
+
+                float(
+                    purchase_order
+                    .quantity_received
+                    or 0
+                ),
+
+                0,
+            )
+
+            purchase_order.quantity_shortage = (
+                remaining_after_receipt
+            )
+
+            purchase_order \
+                .last_tracking_update = (
+                    transaction_time
+                )
 
             purchase_order.current_location = (
-
-                current_location
-
-                or
-
                 purchase_order.warehouse
-
             )
 
+            # ------------------------------------------------
+            # FULL RECEIPT
+            # ------------------------------------------------
+
+            if remaining_after_receipt <= 0:
+
+                next_stage = (
+                    "RECEIVED"
+                )
+
+                purchase_order.order_status = (
+                    "DELIVERED"
+                )
+
+                purchase_order.tracking_stage = (
+                    next_stage
+                )
+
+                purchase_order \
+                    .actual_delivery_date = (
+                        date.today()
+                    )
+
+                purchase_order.tracking_notes = (
+                    "Purchase order fully received."
+                )
+
+                # --------------------------------------------
+                # COMPLETE GPS SHIPMENT
+                # --------------------------------------------
+                #
+                # Shipment must already have ARRIVED.
+                #
+                # commit=False ensures the shipment completion
+                # is part of the same transaction as:
+                #
+                # inventory update
+                # inventory transaction
+                # PO receipt
+                # supplier availability
+                # --------------------------------------------
+
+                ShipmentTrackingService \
+                    .complete_shipment(
+
+                        db=db,
+
+                        purchase_order_id=(
+                            purchase_order.id
+                        ),
+
+                        commit=False,
+                    )
+
+            # ------------------------------------------------
+            # PARTIAL RECEIPT
+            # ------------------------------------------------
+
+            else:
+
+                next_stage = (
+                    "PARTIALLY_RECEIVED"
+                )
+
+                purchase_order.order_status = (
+                    "PARTIAL"
+                )
+
+                purchase_order.tracking_stage = (
+                    next_stage
+                )
+
+                purchase_order.tracking_notes = (
+                    f"Partial receipt recorded. "
+                    f"Received: "
+                    f"{quantity_received}. "
+                    f"Remaining: "
+                    f"{remaining_after_receipt}."
+                )
 
             if (
                 purchase_order
@@ -1480,99 +2015,104 @@ class PurchaseOrderService:
                 is None
             ):
 
-                purchase_order.arrived_at_warehouse_at = (
-                    utc_now()
-                )
-
-
-        # ----------------------------------------------------
-        # PARTIAL RECEIPT
-        # ----------------------------------------------------
-
-        elif stage == "PARTIALLY_RECEIVED":
-
-            purchase_order.order_status = (
-                "PARTIAL"
-            )
-
-
-        # ----------------------------------------------------
-        # RECEIVED
-        # ----------------------------------------------------
-
-        elif stage == "RECEIVED":
-
-            purchase_order.order_status = (
-                "DELIVERED"
-            )
-
-
-            purchase_order.actual_delivery_date = (
-                purchase_order.actual_delivery_date
-                or
-                date.today()
-            )
-
-
-            purchase_order.current_location = (
-                purchase_order.warehouse
-            )
-
-
-        # ----------------------------------------------------
-        # CANCELLED
-        # ----------------------------------------------------
-
-        elif stage == "CANCELLED":
-
-            purchase_order.order_status = (
-                "CANCELLED"
-            )
-
+                purchase_order \
+                    .arrived_at_warehouse_at = (
+                        transaction_time
+                    )
 
             # ------------------------------------------------
-            # RELEASE UNUSED SUPPLIER CAPACITY
+            # STATUS HISTORY
+            # ------------------------------------------------
+
+            PurchaseOrderService \
+                .add_status_history(
+
+                    db=db,
+
+                    purchase_order_id=(
+                        purchase_order.id
+                    ),
+
+                    from_stage=(
+                        previous_stage
+                    ),
+
+                    to_stage=(
+                        next_stage
+                    ),
+
+                    location=(
+                        purchase_order
+                        .warehouse
+                    ),
+
+                    notes=(
+                        purchase_order
+                        .tracking_notes
+                    ),
+                )
+
+            # ------------------------------------------------
+            # DELIVERY DELAY
             # ------------------------------------------------
 
             if (
-                previous_status
-                !=
-                "CANCELLED"
+                purchase_order
+                .expected_delivery_date
+                is not None
             ):
 
-                remaining_units = int(
+                purchase_order \
+                    .delivery_delay_days = max(
 
+                        (
+                            date.today()
+
+                            -
+
+                            purchase_order
+                            .expected_delivery_date
+
+                        ).days,
+
+                        0,
+                    )
+
+            # ------------------------------------------------
+            # RELEASE SUPPLIER COMMITMENT
+            # ------------------------------------------------
+
+            availability = (
+                db.query(
+                    SupplierAvailability
+                )
+                .filter(
+
+                    SupplierAvailability
+                    .supplier_id
+                    ==
+                    purchase_order
+                    .supplier_id,
+
+                    SupplierAvailability
+                    .component_id
+                    ==
+                    purchase_order
+                    .component_id,
+                )
+                .first()
+            )
+
+            if availability is not None:
+
+                received_units = int(
                     ceil(
-                        remaining_quantity
+                        quantity_received
                     )
-
                 )
 
-
-                availability = (
-
-                    db.query(
-                        SupplierAvailability
-                    )
-
-                    .filter(
-                        SupplierAvailability.supplier_id
-                        ==
-                        purchase_order.supplier_id,
-
-                        SupplierAvailability.component_id
-                        ==
-                        purchase_order.component_id
-                    )
-
-                    .first()
-
-                )
-
-
-                if availability is not None:
-
-                    availability.committed_quantity = max(
+                availability \
+                    .committed_quantity = max(
 
                         int(
                             availability
@@ -1581,14 +2121,14 @@ class PurchaseOrderService:
                         )
 
                         -
-                        remaining_units,
 
-                        0
+                        received_units,
 
+                        0,
                     )
 
-
-                    availability.available_to_promise = max(
+                availability \
+                    .available_to_promise = max(
 
                         int(
                             availability
@@ -1604,490 +2144,16 @@ class PurchaseOrderService:
                             or 0
                         ),
 
-                        0
-
+                        0,
                     )
 
-
-                    availability.last_updated = (
-                        utc_now()
-                    )
-
-
-        db.commit()
-
-
-        return (
-            PurchaseOrderService
-            .get_order(
-
-                db=db,
-
-                purchase_order_id=(
-                    purchase_order_id
-                )
-            )
-        )
-
-
-    # ========================================================
-    # RECEIVE PURCHASE ORDER
-    # ========================================================
-
-    @staticmethod
-    def receive_order(
-
-        db: Session,
-
-        purchase_order_id: int,
-
-        quantity_received: float
-
-    ):
-
-        # ----------------------------------------------------
-        # PURCHASE ORDER
-        # ----------------------------------------------------
-
-        purchase_order = (
-
-            db.query(
-                PurchaseOrder
-            )
-
-            .filter(
-                PurchaseOrder.id
-                ==
-                purchase_order_id
-            )
-
-            .first()
-
-        )
-
-
-        if purchase_order is None:
-
-            raise ValueError(
-                "Purchase order not found."
-            )
-
-
-        PurchaseOrderService.validate_application_order(
-            purchase_order
-        )
-
-
-        # ----------------------------------------------------
-        # STATUS VALIDATION
-        # ----------------------------------------------------
-
-        if (
-            purchase_order.order_status
-            ==
-            "CANCELLED"
-        ):
-
-            raise ValueError(
-                "Cancelled purchase order cannot be received."
-            )
-
-
-        if (
-            purchase_order.order_status
-            ==
-            "DELIVERED"
-        ):
-
-            raise ValueError(
-                "Purchase order has already been fully received."
-            )
-
-
-        # ----------------------------------------------------
-        # QUANTITY
-        # ----------------------------------------------------
-
-        quantity_received = float(
-            quantity_received
-        )
-
-
-        if quantity_received <= 0:
-
-            raise ValueError(
-                "Received quantity must be greater than zero."
-            )
-
-
-        ordered_quantity = float(
-
-            purchase_order
-            .quantity_ordered
-
-            or 0
-
-        )
-
-
-        already_received = float(
-
-            purchase_order
-            .quantity_received
-
-            or 0
-
-        )
-
-
-        remaining_quantity = max(
-
-            ordered_quantity
-            -
-            already_received,
-
-            0
-
-        )
-
-
-        if quantity_received > remaining_quantity:
-
-            raise ValueError(
-
-                "Received quantity exceeds "
-                "the remaining PO quantity. "
-                f"Remaining quantity: "
-                f"{remaining_quantity}"
-
-            )
-
-
-        # ----------------------------------------------------
-        # DESTINATION INVENTORY
-        # ----------------------------------------------------
-
-        inventory = (
-
-            db.query(Inventory)
-
-            .filter(
-                Inventory.component_id
-                ==
-                purchase_order.component_id,
-
-                Inventory.warehouse
-                ==
-                purchase_order.warehouse
-            )
-
-            .first()
-
-        )
-
-
-        if inventory is None:
-
-            raise ValueError(
-
-                "Destination inventory record "
-                "does not exist."
-
-            )
-
-
-        # ----------------------------------------------------
-        # UPDATE INVENTORY
-        #
-        # IMPORTANT:
-        # We do this inside the SAME transaction as the PO.
-        # ----------------------------------------------------
-
-        inventory.current_stock = (
-
-            float(
-                inventory.current_stock
-                or 0
-            )
-
-            +
-            quantity_received
-
-        )
-
-
-        StockMovementService.recalculate_inventory(
-            inventory
-        )
-
-
-        # ----------------------------------------------------
-        # INVENTORY TRANSACTION
-        # ----------------------------------------------------
-
-        transaction_time = (
-            utc_now()
-        )
-
-
-        inventory_transaction = (
-            InventoryTransaction(
-
-                transaction_id=(
-
-                    StockMovementService
-                    .generate_transaction_id(
-                        db
-                    )
-
-                ),
-
-                component_id=(
-                    purchase_order.component_id
-                ),
-
-                warehouse=(
-                    purchase_order.warehouse
-                ),
-
-                transaction_type=(
-                    "RECEIPT"
-                ),
-
-                quantity=(
-                    quantity_received
-                ),
-
-                reference_id=(
-                    purchase_order.po_number
-                ),
-
-                transaction_date=(
-                    transaction_time
-                ),
-
-                created_at=(
+                availability.last_updated = (
                     transaction_time
                 )
-            )
-        )
 
-
-        db.add(
-            inventory_transaction
-        )
-
-
-        # ----------------------------------------------------
-        # UPDATE PURCHASE ORDER
-        # ----------------------------------------------------
-
-        purchase_order.quantity_received = (
-
-            already_received
-            +
-            quantity_received
-
-        )
-
-
-        remaining_after_receipt = max(
-
-            ordered_quantity
-            -
-            float(
-                purchase_order
-                .quantity_received
-                or 0
-            ),
-
-            0
-
-        )
-
-
-        purchase_order.quantity_shortage = (
-            remaining_after_receipt
-        )
-
-
-        purchase_order.last_tracking_update = (
-            utc_now()
-        )
-
-
-        purchase_order.current_location = (
-            purchase_order.warehouse
-        )
-
-
-        # ----------------------------------------------------
-        # FULL RECEIPT
-        # ----------------------------------------------------
-
-        if remaining_after_receipt <= 0:
-
-            purchase_order.order_status = (
-                "DELIVERED"
-            )
-
-
-            purchase_order.tracking_stage = (
-                "RECEIVED"
-            )
-
-
-            purchase_order.actual_delivery_date = (
-                date.today()
-            )
-
-
-            if (
-                purchase_order
-                .arrived_at_warehouse_at
-                is None
-            ):
-
-                purchase_order.arrived_at_warehouse_at = (
-                    utc_now()
-                )
-
-
-        # ----------------------------------------------------
-        # PARTIAL RECEIPT
-        # ----------------------------------------------------
-
-        else:
-
-            purchase_order.order_status = (
-                "PARTIAL"
-            )
-
-
-            purchase_order.tracking_stage = (
-                "PARTIALLY_RECEIVED"
-            )
-
-
-            if (
-                purchase_order
-                .arrived_at_warehouse_at
-                is None
-            ):
-
-                purchase_order.arrived_at_warehouse_at = (
-                    utc_now()
-                )
-
-
-        # ----------------------------------------------------
-        # DELIVERY DELAY
-        # ----------------------------------------------------
-
-        if (
-            purchase_order
-            .expected_delivery_date
-            is not None
-        ):
-
-            purchase_order.delivery_delay_days = max(
-
-                (
-                    date.today()
-
-                    -
-
-                    purchase_order
-                    .expected_delivery_date
-
-                ).days,
-
-                0
-
-            )
-
-
-        # ----------------------------------------------------
-        # RELEASE SUPPLIER COMMITMENT
-        # ----------------------------------------------------
-
-        availability = (
-
-            db.query(
-                SupplierAvailability
-            )
-
-            .filter(
-                SupplierAvailability.supplier_id
-                ==
-                purchase_order.supplier_id,
-
-                SupplierAvailability.component_id
-                ==
-                purchase_order.component_id
-            )
-
-            .first()
-
-        )
-
-
-        if availability is not None:
-
-            received_units = int(
-                ceil(
-                    quantity_received
-                )
-            )
-
-
-            availability.committed_quantity = max(
-
-                int(
-                    availability
-                    .committed_quantity
-                    or 0
-                )
-
-                -
-                received_units,
-
-                0
-
-            )
-
-
-            availability.available_to_promise = max(
-
-                int(
-                    availability
-                    .available_quantity
-                    or 0
-                )
-
-                -
-
-                int(
-                    availability
-                    .committed_quantity
-                    or 0
-                ),
-
-                0
-
-            )
-
-
-            availability.last_updated = (
-                utc_now()
-            )
-
-
-        # ----------------------------------------------------
-        # COMMIT INVENTORY + TRANSACTION + PO TOGETHER
-        # ----------------------------------------------------
-
-        try:
+            # ------------------------------------------------
+            # COMMIT EVERYTHING TOGETHER
+            # ------------------------------------------------
 
             db.commit()
 
@@ -2097,11 +2163,6 @@ class PurchaseOrderService:
 
             raise
 
-
-        # ----------------------------------------------------
-        # RETURN UPDATED ORDER
-        # ----------------------------------------------------
-
         return (
             PurchaseOrderService
             .get_order(
@@ -2110,6 +2171,6 @@ class PurchaseOrderService:
 
                 purchase_order_id=(
                     purchase_order_id
-                )
+                ),
             )
         )

@@ -1,4 +1,38 @@
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL =
+  "http://127.0.0.1:8000";
+
+
+// ============================================================
+// AUTH TOKEN
+// ============================================================
+
+export function getAuthToken() {
+
+  return localStorage.getItem(
+    "ev_supply_chain_token"
+  );
+
+}
+
+
+export function setAuthToken(token) {
+
+  if (token) {
+
+    localStorage.setItem(
+      "ev_supply_chain_token",
+      token
+    );
+
+  } else {
+
+    localStorage.removeItem(
+      "ev_supply_chain_token"
+    );
+
+  }
+
+}
 
 
 // ============================================================
@@ -10,16 +44,35 @@ async function apiRequest(
   options = {}
 ) {
 
-  const response = await fetch(
-    `${API_BASE_URL}${endpoint}`,
-    {
-      headers: {
-        "Content-Type": "application/json",
-        ...(options.headers || {})
-      },
-      ...options
-    }
-  );
+  const token =
+    getAuthToken();
+
+
+  const headers = {
+
+    "Content-Type":
+      "application/json",
+
+    ...(token
+      ? {
+          Authorization:
+            `Bearer ${token}`
+        }
+      : {}),
+
+    ...(options.headers || {})
+
+  };
+
+
+  const response =
+    await fetch(
+      `${API_BASE_URL}${endpoint}`,
+      {
+        ...options,
+        headers
+      }
+    );
 
 
   if (!response.ok) {
@@ -27,20 +80,40 @@ async function apiRequest(
     let errorMessage =
       "API request failed.";
 
+
     try {
 
       const errorData =
         await response.json();
 
-      errorMessage =
-        errorData.detail ||
-        errorMessage;
+
+      if (
+        Array.isArray(
+          errorData.detail
+        )
+      ) {
+
+        errorMessage =
+          errorData.detail
+            .map(
+              item =>
+                item.msg
+            )
+            .join(", ");
+
+      } else {
+
+        errorMessage =
+          errorData.detail ||
+          errorData.message ||
+          errorMessage;
+
+      }
 
     }
-
     catch {
 
-      // Keep default error.
+      // Keep default error message.
 
     }
 
@@ -52,7 +125,60 @@ async function apiRequest(
   }
 
 
+  // Some API endpoints may return 204 No Content.
+
+  if (
+    response.status === 204
+  ) {
+
+    return null;
+
+  }
+
+
   return response.json();
+
+}
+
+
+// ============================================================
+// AUTHENTICATION
+// ============================================================
+
+export async function loginUser(
+  email,
+  password
+) {
+
+  return apiRequest(
+    "/auth/login",
+    {
+      method: "POST",
+
+      body: JSON.stringify({
+        email,
+        password
+      })
+    }
+  );
+
+}
+
+
+export async function getCurrentUser() {
+
+  return apiRequest(
+    "/auth/me"
+  );
+
+}
+
+
+export function logoutUser() {
+
+  setAuthToken(
+    null
+  );
 
 }
 
@@ -70,6 +196,10 @@ export async function getSuppliers() {
 }
 
 
+// ============================================================
+// SUPPLIER INTELLIGENCE
+// ============================================================
+
 export async function getSupplierIntelligence(
   componentId
 ) {
@@ -80,6 +210,10 @@ export async function getSupplierIntelligence(
 
 }
 
+
+// ============================================================
+// SUPPLIER METRICS
+// ============================================================
 
 export async function getSupplierMetrics(
   supplierId
@@ -92,6 +226,10 @@ export async function getSupplierMetrics(
 }
 
 
+// ============================================================
+// ALL SUPPLIER METRICS
+// ============================================================
+
 export async function getAllSupplierMetrics() {
 
   return apiRequest(
@@ -100,6 +238,10 @@ export async function getAllSupplierMetrics() {
 
 }
 
+
+// ============================================================
+// SUPPLIER PERFORMANCE
+// ============================================================
 
 export async function getSupplierPerformance(
   supplierId
@@ -111,6 +253,10 @@ export async function getSupplierPerformance(
 
 }
 
+
+// ============================================================
+// SUPPLIER RISK
+// ============================================================
 
 export async function getSupplierRisk(
   supplierId
@@ -124,7 +270,7 @@ export async function getSupplierRisk(
 
 
 // ============================================================
-// PROCUREMENT
+// PROCUREMENT - SUPPLIER OPTIONS
 // ============================================================
 
 export async function getSupplierOptions(
@@ -139,6 +285,10 @@ export async function getSupplierOptions(
 }
 
 
+// ============================================================
+// PROCUREMENT RECOMMENDATION
+// ============================================================
+
 export async function getProcurementRecommendation(
   componentId,
   requiredQuantity
@@ -150,6 +300,10 @@ export async function getProcurementRecommendation(
 
 }
 
+
+// ============================================================
+// PROCUREMENT SUPPLIERS
+// ============================================================
 
 export async function getProcurementSuppliers(
   componentId,
@@ -163,10 +317,17 @@ export async function getProcurementSuppliers(
     );
 
 
-  return data.supplier_options || [];
+  return (
+    data.supplier_options ||
+    []
+  );
 
 }
 
+
+// ============================================================
+// PROCUREMENT DECISION
+// ============================================================
 
 export async function getProcurementDecision(
   componentId,
@@ -234,9 +395,7 @@ export async function getVehicleRequirementAnalysis(
 
 
   return apiRequest(
-
     `/inventory/vehicle/${vehicleId}/requirements?${query.toString()}`
-
   );
 
 }
@@ -255,6 +414,10 @@ export async function getInventory() {
 }
 
 
+// ============================================================
+// INVENTORY BY COMPONENT
+// ============================================================
+
 export async function getInventoryByComponent(
   componentId
 ) {
@@ -266,16 +429,26 @@ export async function getInventoryByComponent(
 }
 
 
+// ============================================================
+// INVENTORY BY WAREHOUSE
+// ============================================================
+
 export async function getInventoryByWarehouse(
   warehouse
 ) {
 
   return apiRequest(
-    `/inventory/warehouse/${encodeURIComponent(warehouse)}`
+    `/inventory/warehouse/${encodeURIComponent(
+      warehouse
+    )}`
   );
 
 }
 
+
+// ============================================================
+// INVENTORY RECORD
+// ============================================================
 
 export async function getInventoryRecord(
   inventoryId
@@ -307,15 +480,20 @@ export async function receiveStock(
       body: JSON.stringify({
 
         component_id:
-          Number(componentId),
+          Number(
+            componentId
+          ),
 
         warehouse,
 
         quantity:
-          Number(quantity),
+          Number(
+            quantity
+          ),
 
         reference_id:
-          referenceId || null
+          referenceId ||
+          null
 
       })
     }
@@ -343,15 +521,20 @@ export async function issueStock(
       body: JSON.stringify({
 
         component_id:
-          Number(componentId),
+          Number(
+            componentId
+          ),
 
         warehouse,
 
         quantity:
-          Number(quantity),
+          Number(
+            quantity
+          ),
 
         reference_id:
-          referenceId || null
+          referenceId ||
+          null
 
       })
     }
@@ -379,15 +562,20 @@ export async function adjustStock(
       body: JSON.stringify({
 
         component_id:
-          Number(componentId),
+          Number(
+            componentId
+          ),
 
         warehouse,
 
         quantity:
-          Number(quantity),
+          Number(
+            quantity
+          ),
 
         reference_id:
-          referenceId || null
+          referenceId ||
+          null
 
       })
     }
@@ -416,7 +604,9 @@ export async function transferStock(
       body: JSON.stringify({
 
         component_id:
-          Number(componentId),
+          Number(
+            componentId
+          ),
 
         source_warehouse:
           sourceWarehouse,
@@ -425,10 +615,13 @@ export async function transferStock(
           destinationWarehouse,
 
         quantity:
-          Number(quantity),
+          Number(
+            quantity
+          ),
 
         reference_id:
-          referenceId || null
+          referenceId ||
+          null
 
       })
     }
@@ -438,7 +631,7 @@ export async function transferStock(
 
 
 // ============================================================
-// TRANSACTIONS
+// INVENTORY TRANSACTIONS
 // ============================================================
 
 export async function getInventoryTransactions() {
@@ -448,6 +641,8 @@ export async function getInventoryTransactions() {
   );
 
 }
+
+
 // ============================================================
 // PURCHASE ORDER TRACKING
 // ============================================================
@@ -501,7 +696,7 @@ export async function getPurchaseOrder(
 
 
 // ============================================================
-// UPDATE TRACKING
+// UPDATE PURCHASE ORDER TRACKING
 // ============================================================
 
 export async function updatePurchaseOrderTracking(
@@ -522,10 +717,12 @@ export async function updatePurchaseOrderTracking(
           trackingStage,
 
         current_location:
-          currentLocation || null,
+          currentLocation ||
+          null,
 
         tracking_notes:
-          trackingNotes || null
+          trackingNotes ||
+          null
 
       })
     }
@@ -557,6 +754,129 @@ export async function receivePurchaseOrder(
 
       })
     }
+  );
+
+}
+
+
+// ============================================================
+// PURCHASE ORDER STATUS HISTORY
+// ============================================================
+
+export async function getPurchaseOrderHistory(
+  purchaseOrderId
+) {
+
+  return apiRequest(
+    `/inventory/orders/${purchaseOrderId}/history`
+  );
+
+}
+
+
+// ============================================================
+// GET PURCHASE ORDER SHIPMENT
+// ============================================================
+
+export async function getPurchaseOrderShipment(
+  purchaseOrderId
+) {
+
+  return apiRequest(
+    `/inventory/orders/${purchaseOrderId}/shipment`
+  );
+
+}
+
+
+// ============================================================
+// CREATE PURCHASE ORDER SHIPMENT
+//
+// Normally the backend automatically creates a shipment when
+// the purchase order reaches DISPATCHED.
+// This endpoint remains useful for testing/debugging.
+// ============================================================
+
+export async function createPurchaseOrderShipment(
+  purchaseOrderId
+) {
+
+  return apiRequest(
+    `/inventory/orders/${purchaseOrderId}/shipment`,
+    {
+      method: "POST"
+    }
+  );
+
+}
+
+
+// ============================================================
+// SIMULATE NEXT SHIPMENT GPS LOCATION
+// ============================================================
+
+export async function simulateShipmentLocation(
+  purchaseOrderId
+) {
+
+  return apiRequest(
+    `/inventory/orders/${purchaseOrderId}/shipment/simulate`,
+    {
+      method: "POST"
+    }
+  );
+
+}
+
+
+// ============================================================
+// GET SHIPMENT GPS TRACKING HISTORY
+// ============================================================
+
+export async function getShipmentTrackingHistory(
+  purchaseOrderId
+) {
+
+  return apiRequest(
+    `/inventory/orders/${purchaseOrderId}/shipment/history`
+  );
+
+}
+
+
+// ============================================================
+// GRAPH-RAG - ASK AI
+// ============================================================
+
+export async function askGraphRAG(
+  question
+) {
+
+  return apiRequest(
+    "/graph-rag/ask",
+    {
+      method: "POST",
+
+      body: JSON.stringify({
+
+        question:
+          question.trim()
+
+      })
+    }
+  );
+
+}
+
+
+// ============================================================
+// GRAPH-RAG - GRAPH SUMMARY
+// ============================================================
+
+export async function getGraphSummary() {
+
+  return apiRequest(
+    "/graph-rag/summary"
   );
 
 }

@@ -4,19 +4,19 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
-    Query
+    Query,
 )
 
 from sqlalchemy.orm import Session
 
 from backend.app.database.connection import (
-    SessionLocal
+    SessionLocal,
 )
 
 from backend.app.models import (
     Inventory,
     InventoryTransaction,
-    Vehicle
+    Vehicle,
 )
 
 from backend.app.schemas.inventory import (
@@ -25,35 +25,45 @@ from backend.app.schemas.inventory import (
     IssueRequest,
     AdjustmentRequest,
     TransferRequest,
-    TransactionResponse
+    TransactionResponse,
 )
 
 from backend.app.schemas.vehicle import (
-    VehicleResponse
+    VehicleResponse,
 )
 
 from backend.app.schemas.vehicle_inventory import (
     VehicleInventoryAnalysisResponse,
-    VehicleRequirementAnalysisResponse
+    VehicleRequirementAnalysisResponse,
 )
 
 from backend.app.schemas.purchase_order_tracking import (
     PurchaseOrderCreateRequest,
     PurchaseOrderTrackingUpdateRequest,
     PurchaseOrderReceiveRequest,
-    PurchaseOrderTrackingResponse
+    PurchaseOrderTrackingResponse,
+    PurchaseOrderStatusHistoryResponse,
+)
+
+from backend.app.schemas.shipment_tracking import (
+    ShipmentResponse,
+    ShipmentTrackingPointResponse,
 )
 
 from backend.app.service.stock_movement_service import (
-    StockMovementService
+    StockMovementService,
 )
 
 from backend.app.service.inventory_analysis_service import (
-    InventoryAnalysisService
+    InventoryAnalysisService,
 )
 
 from backend.app.service.purchase_order_service import (
-    PurchaseOrderService
+    PurchaseOrderService,
+)
+
+from backend.app.service.shipment_tracking_service import (
+    ShipmentTrackingService,
 )
 
 
@@ -63,7 +73,7 @@ from backend.app.service.purchase_order_service import (
 
 router = APIRouter(
     prefix="/inventory",
-    tags=["Inventory"]
+    tags=["Inventory"],
 )
 
 
@@ -88,10 +98,10 @@ def get_db():
 
 @router.get(
     "/vehicles",
-    response_model=list[VehicleResponse]
+    response_model=list[VehicleResponse],
 )
 def get_inventory_vehicles(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
 
     vehicles = (
@@ -114,11 +124,11 @@ def get_inventory_vehicles(
 
 @router.get(
     "/vehicle/{vehicle_id}/components",
-    response_model=VehicleInventoryAnalysisResponse
+    response_model=VehicleInventoryAnalysisResponse,
 )
 def get_vehicle_inventory_components(
     vehicle_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
 
     try:
@@ -127,7 +137,7 @@ def get_vehicle_inventory_components(
             InventoryAnalysisService
             .get_vehicle_inventory(
                 db=db,
-                vehicle_id=vehicle_id
+                vehicle_id=vehicle_id,
             )
         )
 
@@ -135,7 +145,7 @@ def get_vehicle_inventory_components(
 
         raise HTTPException(
             status_code=404,
-            detail=str(error)
+            detail=str(error),
         ) from error
 
 
@@ -145,7 +155,7 @@ def get_vehicle_inventory_components(
 
 @router.get(
     "/vehicle/{vehicle_id}/requirements",
-    response_model=VehicleRequirementAnalysisResponse
+    response_model=VehicleRequirementAnalysisResponse,
 )
 def get_vehicle_requirement_analysis(
 
@@ -153,14 +163,14 @@ def get_vehicle_requirement_analysis(
 
     planned_quantity: int = Query(
         ...,
-        gt=0
+        gt=0,
     ),
 
     required_date: date = Query(
         ...
     ),
 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 
 ):
 
@@ -180,7 +190,7 @@ def get_vehicle_requirement_analysis(
 
                 required_date=(
                     required_date
-                )
+                ),
             )
         )
 
@@ -188,7 +198,7 @@ def get_vehicle_requirement_analysis(
 
         raise HTTPException(
             status_code=400,
-            detail=str(error)
+            detail=str(error),
         ) from error
 
 
@@ -198,17 +208,17 @@ def get_vehicle_requirement_analysis(
 
 @router.get(
     "",
-    response_model=list[InventoryResponse]
+    response_model=list[InventoryResponse],
 )
 def get_inventory(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
 
     return (
         db.query(Inventory)
         .order_by(
             Inventory.component_id,
-            Inventory.warehouse
+            Inventory.warehouse,
         )
         .all()
     )
@@ -220,25 +230,25 @@ def get_inventory(
 
 @router.get(
     "/component/{component_id}",
-    response_model=list[InventoryResponse]
+    response_model=list[InventoryResponse],
 )
 def get_inventory_by_component(
     component_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
 
     records = (
         db.query(Inventory)
         .filter(
             Inventory.component_id
-            == component_id
+            ==
+            component_id
         )
         .order_by(
             Inventory.warehouse
         )
         .all()
     )
-
 
     if not records:
 
@@ -247,9 +257,8 @@ def get_inventory_by_component(
             detail=(
                 "Inventory records not found "
                 "for this component."
-            )
+            ),
         )
-
 
     return records
 
@@ -260,25 +269,25 @@ def get_inventory_by_component(
 
 @router.get(
     "/warehouse/{warehouse}",
-    response_model=list[InventoryResponse]
+    response_model=list[InventoryResponse],
 )
 def get_inventory_by_warehouse(
     warehouse: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
 
     records = (
         db.query(Inventory)
         .filter(
             Inventory.warehouse
-            == warehouse
+            ==
+            warehouse
         )
         .order_by(
             Inventory.component_id
         )
         .all()
     )
-
 
     if not records:
 
@@ -287,9 +296,8 @@ def get_inventory_by_warehouse(
             detail=(
                 "Inventory records not found "
                 "for this warehouse."
-            )
+            ),
         )
-
 
     return records
 
@@ -300,10 +308,10 @@ def get_inventory_by_warehouse(
 
 @router.get(
     "/transactions/all",
-    response_model=list[TransactionResponse]
+    response_model=list[TransactionResponse],
 )
 def get_inventory_transactions(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
 
     return (
@@ -339,13 +347,13 @@ def get_inventory_transactions(
     "/orders",
     response_model=list[
         PurchaseOrderTrackingResponse
-    ]
+    ],
 )
 def get_purchase_orders(
 
     include_historical: bool = False,
 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 
 ):
 
@@ -357,7 +365,7 @@ def get_purchase_orders(
 
             include_historical=(
                 include_historical
-            )
+            ),
         )
     )
 
@@ -368,13 +376,13 @@ def get_purchase_orders(
 
 @router.post(
     "/orders",
-    response_model=PurchaseOrderTrackingResponse
+    response_model=PurchaseOrderTrackingResponse,
 )
 def create_purchase_order(
 
     request: PurchaseOrderCreateRequest,
 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 
 ):
 
@@ -412,7 +420,7 @@ def create_purchase_order(
 
                 urgency=(
                     request.urgency
-                )
+                ),
             )
         )
 
@@ -420,7 +428,7 @@ def create_purchase_order(
 
         raise HTTPException(
             status_code=400,
-            detail=str(error)
+            detail=str(error),
         ) from error
 
 
@@ -430,13 +438,13 @@ def create_purchase_order(
 
 @router.get(
     "/orders/{purchase_order_id}",
-    response_model=PurchaseOrderTrackingResponse
+    response_model=PurchaseOrderTrackingResponse,
 )
 def get_purchase_order(
 
     purchase_order_id: int,
 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 
 ):
 
@@ -450,7 +458,7 @@ def get_purchase_order(
 
                 purchase_order_id=(
                     purchase_order_id
-                )
+                ),
             )
         )
 
@@ -458,7 +466,47 @@ def get_purchase_order(
 
         raise HTTPException(
             status_code=404,
-            detail=str(error)
+            detail=str(error),
+        ) from error
+
+
+# ============================================================
+# GET PURCHASE ORDER STATUS HISTORY
+# ============================================================
+
+@router.get(
+    "/orders/{purchase_order_id}/history",
+    response_model=list[
+        PurchaseOrderStatusHistoryResponse
+    ],
+)
+def get_purchase_order_status_history(
+
+    purchase_order_id: int,
+
+    db: Session = Depends(get_db),
+
+):
+
+    try:
+
+        return (
+            PurchaseOrderService
+            .get_status_history(
+
+                db=db,
+
+                purchase_order_id=(
+                    purchase_order_id
+                ),
+            )
+        )
+
+    except ValueError as error:
+
+        raise HTTPException(
+            status_code=404,
+            detail=str(error),
         ) from error
 
 
@@ -468,7 +516,7 @@ def get_purchase_order(
 
 @router.patch(
     "/orders/{purchase_order_id}/tracking",
-    response_model=PurchaseOrderTrackingResponse
+    response_model=PurchaseOrderTrackingResponse,
 )
 def update_purchase_order_tracking(
 
@@ -476,7 +524,7 @@ def update_purchase_order_tracking(
 
     request: PurchaseOrderTrackingUpdateRequest,
 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 
 ):
 
@@ -502,7 +550,7 @@ def update_purchase_order_tracking(
 
                 tracking_notes=(
                     request.tracking_notes
-                )
+                ),
             )
         )
 
@@ -510,7 +558,7 @@ def update_purchase_order_tracking(
 
         raise HTTPException(
             status_code=400,
-            detail=str(error)
+            detail=str(error),
         ) from error
 
 
@@ -520,7 +568,7 @@ def update_purchase_order_tracking(
 
 @router.post(
     "/orders/{purchase_order_id}/receive",
-    response_model=PurchaseOrderTrackingResponse
+    response_model=PurchaseOrderTrackingResponse,
 )
 def receive_purchase_order(
 
@@ -528,7 +576,7 @@ def receive_purchase_order(
 
     request: PurchaseOrderReceiveRequest,
 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 
 ):
 
@@ -546,7 +594,7 @@ def receive_purchase_order(
 
                 quantity_received=(
                     request.quantity_received
-                )
+                ),
             )
         )
 
@@ -554,7 +602,175 @@ def receive_purchase_order(
 
         raise HTTPException(
             status_code=400,
-            detail=str(error)
+            detail=str(error),
+        ) from error
+
+
+# ============================================================
+# ============================================================
+#
+# SHIPMENT / GPS TRACKING ROUTES
+#
+# These routes are for simulated GPS shipment tracking.
+#
+# ============================================================
+# ============================================================
+
+
+# ============================================================
+# CREATE SHIPMENT FOR PURCHASE ORDER
+# ============================================================
+
+@router.post(
+    "/orders/{purchase_order_id}/shipment",
+    response_model=ShipmentResponse,
+)
+def create_purchase_order_shipment(
+
+    purchase_order_id: int,
+
+    db: Session = Depends(get_db),
+
+):
+
+    try:
+
+        return (
+            ShipmentTrackingService
+            .create_shipment(
+
+                db=db,
+
+                purchase_order_id=(
+                    purchase_order_id
+                ),
+            )
+        )
+
+    except ValueError as error:
+
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+
+# ============================================================
+# GET SHIPMENT FOR PURCHASE ORDER
+# ============================================================
+
+@router.get(
+    "/orders/{purchase_order_id}/shipment",
+    response_model=ShipmentResponse,
+)
+def get_purchase_order_shipment(
+
+    purchase_order_id: int,
+
+    db: Session = Depends(get_db),
+
+):
+
+    shipment = (
+        ShipmentTrackingService
+        .get_shipment_by_purchase_order(
+
+            db=db,
+
+            purchase_order_id=(
+                purchase_order_id
+            ),
+        )
+    )
+
+    if shipment is None:
+
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Shipment not found for this "
+                "purchase order."
+            ),
+        )
+
+    return shipment
+
+
+# ============================================================
+# SIMULATE NEXT GPS LOCATION
+# ============================================================
+
+@router.post(
+    "/orders/{purchase_order_id}/shipment/simulate",
+    response_model=ShipmentResponse,
+)
+def simulate_purchase_order_shipment(
+
+    purchase_order_id: int,
+
+    db: Session = Depends(get_db),
+
+):
+
+    try:
+
+        return (
+            ShipmentTrackingService
+            .simulate_next_location(
+
+                db=db,
+
+                purchase_order_id=(
+                    purchase_order_id
+                ),
+            )
+        )
+
+    except ValueError as error:
+
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+
+# ============================================================
+# GET SHIPMENT GPS HISTORY
+# ============================================================
+
+@router.get(
+    "/orders/{purchase_order_id}/shipment/history",
+    response_model=list[
+        ShipmentTrackingPointResponse
+    ],
+)
+def get_purchase_order_shipment_history(
+
+    purchase_order_id: int,
+
+    db: Session = Depends(get_db),
+
+):
+
+    try:
+
+        return (
+            ShipmentTrackingService
+            .get_tracking_history(
+
+                db=db,
+
+                purchase_order_id=(
+                    purchase_order_id
+                ),
+            )
+        )
+
+    except ValueError as error:
+
+        raise HTTPException(
+            status_code=404,
+            detail=str(error),
         ) from error
 
 
@@ -573,13 +789,13 @@ def receive_purchase_order(
 
 @router.post(
     "/receipt",
-    response_model=InventoryResponse
+    response_model=InventoryResponse,
 )
 def receive_stock(
 
     request: ReceiptRequest,
 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 
 ):
 
@@ -605,7 +821,7 @@ def receive_stock(
 
                 reference_id=(
                     request.reference_id
-                )
+                ),
             )
         )
 
@@ -613,7 +829,7 @@ def receive_stock(
 
         raise HTTPException(
             status_code=400,
-            detail=str(error)
+            detail=str(error),
         ) from error
 
 
@@ -623,13 +839,13 @@ def receive_stock(
 
 @router.post(
     "/issue",
-    response_model=InventoryResponse
+    response_model=InventoryResponse,
 )
 def issue_stock(
 
     request: IssueRequest,
 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 
 ):
 
@@ -655,7 +871,7 @@ def issue_stock(
 
                 reference_id=(
                     request.reference_id
-                )
+                ),
             )
         )
 
@@ -663,7 +879,7 @@ def issue_stock(
 
         raise HTTPException(
             status_code=400,
-            detail=str(error)
+            detail=str(error),
         ) from error
 
 
@@ -673,13 +889,13 @@ def issue_stock(
 
 @router.post(
     "/adjustment",
-    response_model=InventoryResponse
+    response_model=InventoryResponse,
 )
 def adjust_stock(
 
     request: AdjustmentRequest,
 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 
 ):
 
@@ -705,7 +921,7 @@ def adjust_stock(
 
                 reference_id=(
                     request.reference_id
-                )
+                ),
             )
         )
 
@@ -713,7 +929,7 @@ def adjust_stock(
 
         raise HTTPException(
             status_code=400,
-            detail=str(error)
+            detail=str(error),
         ) from error
 
 
@@ -722,13 +938,13 @@ def adjust_stock(
 # ============================================================
 
 @router.post(
-    "/transfer"
+    "/transfer",
 )
 def transfer_stock(
 
     request: TransferRequest,
 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 
 ):
 
@@ -758,7 +974,7 @@ def transfer_stock(
 
                 reference_id=(
                     request.reference_id
-                )
+                ),
             )
         )
 
@@ -766,7 +982,7 @@ def transfer_stock(
 
         raise HTTPException(
             status_code=400,
-            detail=str(error)
+            detail=str(error),
         ) from error
 
 
@@ -775,13 +991,14 @@ def transfer_stock(
 # ============================================================
 #
 # IMPORTANT:
+#
 # Keep this dynamic route at the END.
 #
-# Otherwise strings such as:
+# Otherwise:
 #
 # /inventory/orders
 #
-# may be interpreted as:
+# could be interpreted as:
 #
 # inventory_id = "orders"
 #
@@ -789,13 +1006,13 @@ def transfer_stock(
 
 @router.get(
     "/{inventory_id}",
-    response_model=InventoryResponse
+    response_model=InventoryResponse,
 )
 def get_inventory_record(
 
     inventory_id: int,
 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 
 ):
 
@@ -803,18 +1020,17 @@ def get_inventory_record(
         db.query(Inventory)
         .filter(
             Inventory.id
-            == inventory_id
+            ==
+            inventory_id
         )
         .first()
     )
-
 
     if inventory is None:
 
         raise HTTPException(
             status_code=404,
-            detail="Inventory record not found."
+            detail="Inventory record not found.",
         )
-
 
     return inventory

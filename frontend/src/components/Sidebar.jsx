@@ -1,15 +1,27 @@
 import {
+  Avatar,
   Box,
+  Button,
+  Divider,
   Drawer,
   List,
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Stack,
   Typography
 } from "@mui/material";
 
+import LogoutIcon from "@mui/icons-material/Logout";
+import PersonIcon from "@mui/icons-material/Person";
 
-const drawerWidth = 250;
+import {
+  useAuth
+} from "../context/AuthContext";
+
+
+const drawerWidth =
+  250;
 
 
 function Sidebar({
@@ -18,42 +30,62 @@ function Sidebar({
   setActivePage
 }) {
 
+  const {
+    user,
+    logout
+  } = useAuth();
+
+
   return (
 
     <Drawer
-
       variant="permanent"
-
       sx={{
 
-        width: drawerWidth,
+        width:
+          drawerWidth,
 
         flexShrink: 0,
 
         "& .MuiDrawer-paper": {
 
-          width: drawerWidth,
+          width:
+            drawerWidth,
 
-          boxSizing: "border-box",
+          boxSizing:
+            "border-box",
 
           borderRight:
             "1px solid #e5e7eb",
 
           backgroundColor:
-            "#ffffff"
+            "#ffffff",
+
+          display:
+            "flex",
+
+          flexDirection:
+            "column"
 
         }
 
       }}
-
     >
+
+      {/* LOGO */}
 
       <Box
         sx={{
           height: 70,
-          display: "flex",
-          alignItems: "center",
+
+          display:
+            "flex",
+
+          alignItems:
+            "center",
+
           px: 3,
+
           borderBottom:
             "1px solid #e5e7eb"
         }}
@@ -70,66 +102,176 @@ function Sidebar({
       </Box>
 
 
-      <List sx={{ px: 1.5, py: 2 }}>
+      {/* MENU */}
 
-        {menuItems.map((item) => (
+      <List
+        sx={{
+          px: 1.5,
+          py: 2,
+          flexGrow: 1
+        }}
+      >
 
-          <ListItemButton
+        {menuItems.map(
+          item => (
 
-            key={item.id}
-
-            selected={
-              activePage === item.id
-            }
-
-            onClick={() =>
-              setActivePage(item.id)
-            }
-
-            sx={{
-
-              borderRadius: 2,
-
-              mb: 0.5,
-
-              "&.Mui-selected": {
-
-                backgroundColor:
-                  "rgba(25,118,210,0.10)",
-
-                color:
-                  "primary.main"
-
+            <ListItemButton
+              key={
+                item.id
               }
-
-            }}
-
-          >
-
-            <ListItemIcon
+              selected={
+                activePage ===
+                item.id
+              }
+              onClick={() =>
+                setActivePage(
+                  item.id
+                )
+              }
               sx={{
-                minWidth: 42,
-                color:
-                  activePage === item.id
-                    ? "primary.main"
-                    : "inherit"
+
+                borderRadius: 2,
+
+                mb: 0.5,
+
+                "&.Mui-selected": {
+
+                  backgroundColor:
+                    "rgba(25,118,210,0.10)",
+
+                  color:
+                    "primary.main"
+
+                }
+
               }}
             >
 
-              {item.icon}
+              <ListItemIcon
+                sx={{
+                  minWidth: 42,
 
-            </ListItemIcon>
+                  color:
+                    activePage ===
+                    item.id
+
+                      ? "primary.main"
+
+                      : "inherit"
+                }}
+              >
+
+                {item.icon}
+
+              </ListItemIcon>
 
 
-            <ListItemText
-              primary={item.label}
-            />
+              <ListItemText
+                primary={
+                  item.label
+                }
+              />
 
-          </ListItemButton>
+            </ListItemButton>
 
-        ))}
+          )
+        )}
 
       </List>
+
+
+      <Divider />
+
+
+      {/* USER */}
+
+      <Box
+        sx={{
+          p: 2
+        }}
+      >
+
+        <Stack
+          direction="row"
+          spacing={1.5}
+          alignItems="center"
+          sx={{
+            mb: 2
+          }}
+        >
+
+          <Avatar
+            sx={{
+              bgcolor:
+                "primary.main"
+            }}
+          >
+
+            <PersonIcon />
+
+          </Avatar>
+
+
+          <Box
+            sx={{
+              minWidth: 0
+            }}
+          >
+
+            <Typography
+              variant="body2"
+              fontWeight={700}
+              noWrap
+            >
+              {
+                user?.full_name ||
+                user?.username
+              }
+            </Typography>
+
+
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              noWrap
+              sx={{
+                display:
+                  "block"
+              }}
+            >
+              {
+                user?.role
+                  ?.replaceAll(
+                    "_",
+                    " "
+                  )
+              }
+            </Typography>
+
+          </Box>
+
+        </Stack>
+
+
+        <Button
+          fullWidth
+          variant="outlined"
+          color="error"
+          startIcon={
+            <LogoutIcon />
+          }
+          onClick={
+            logout
+          }
+          sx={{
+            textTransform:
+              "none"
+          }}
+        >
+          Logout
+        </Button>
+
+      </Box>
 
     </Drawer>
 

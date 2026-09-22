@@ -9,3 +9,8 @@ python-dotenv
 pydantic
 pydantic-settings
 httpx
+neo4j
+PyJWT
+pwdlib[argon2]
+email-validator
+python-dotenv

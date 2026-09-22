@@ -1,5 +1,10 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+
+from fastapi.middleware.cors import (
+    CORSMiddleware
+)
+
+
 from backend.app.api.inventory import (
     router as inventory_router
 )
@@ -39,39 +44,86 @@ from backend.app.api.supplier_details import (
 from backend.app.api.procurement_decision import (
     router as procurement_decision_router
 )
+
+from backend.app.api.graph_rag import (
+    router as graph_rag_router
+)
+
+from backend.app.api.auth import (
+    router as auth_router
+)
+
+
 # ============================================================
 # APPLICATION
 # ============================================================
 
 app = FastAPI(
 
-    title="EV Supply Chain Management System",
+    title=
+        "EV Supply Chain Management System",
 
     description=(
         "Intelligent Supply Chain Management "
         "Platform for Electric Vehicle Manufacturing"
     ),
 
-    version="1.0.0"
+    version=
+        "1.1.0"
+
 )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173"
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+
 # ============================================================
-# ROUTERS
+# CORS
+# ============================================================
+
+app.add_middleware(
+
+    CORSMiddleware,
+
+    allow_origins=[
+
+        "http://localhost:5173",
+
+        "http://127.0.0.1:5173"
+
+    ],
+
+    allow_credentials=True,
+
+    allow_methods=[
+        "*"
+    ],
+
+    allow_headers=[
+        "*"
+    ],
+
+)
+
+
+# ============================================================
+# AUTHENTICATION
+# ============================================================
+
+app.include_router(
+    auth_router
+)
+
+
+# ============================================================
+# INVENTORY
 # ============================================================
 
 app.include_router(
     inventory_router
 )
+
+
+# ============================================================
+# SUPPLIERS
+# ============================================================
 
 app.include_router(
     supplier_router
@@ -101,6 +153,11 @@ app.include_router(
     supplier_selection_router
 )
 
+
+# ============================================================
+# PROCUREMENT
+# ============================================================
+
 app.include_router(
     procurement_router
 )
@@ -108,6 +165,17 @@ app.include_router(
 app.include_router(
     procurement_decision_router
 )
+
+
+# ============================================================
+# KNOWLEDGE GRAPH / GRAPH-RAG
+# ============================================================
+
+app.include_router(
+    graph_rag_router
+)
+
+
 # ============================================================
 # ROOT
 # ============================================================
@@ -124,6 +192,6 @@ def root():
             "running",
 
         "version":
-            "1.0.0"
+            "1.1.0"
 
     }
